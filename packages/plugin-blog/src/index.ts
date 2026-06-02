@@ -21,7 +21,8 @@ export default definePlugin({
     pages: [
       { path: '/admin/blog', element: BlogAdmin },
       { path: '/admin/blog/categories', element: BlogCategoriesAdmin },
-      { path: '/admin/blog/:id', element: BlogPostEdit },
+      { path: '/admin/blog/new', element: BlogPostEdit },
+      { path: '/admin/blog/edit/:id', element: BlogPostEdit },
     ],
   },
   migrations: [{ id: 'blog.V001', sql: V001_blog }],

@@ -31,14 +31,17 @@ describe('createCMS', () => {
     expect(screen.getByText('BLOG PAGE')).toBeDefined()
   })
 
-  it('exposes the composed migration list', () => {
+  it('composes core.V001 ahead of plugin migrations', () => {
     const cms = createCMS({
       template,
       plugins: [definePlugin({ name: 'blog', version: '1.0.0', migrations: [{ id: 'blog.V001', sql: '-- x' }] })],
       site,
       supabase: { anonKey: 'k' },
     })
-    expect(cms.migrations.map((m) => m.id)).toEqual(['blog.V001'])
+    // The core base migration (schema_migrations + is_admin()) MUST lead the list,
+    // otherwise plugin RLS policies reference an is_admin() the pipeline never creates.
+    expect(cms.migrations.map((m) => m.id)).toEqual(['core.V001', 'blog.V001'])
+    expect(cms.migrations[0].sql).toMatch(/is_admin/i)
   })
 
   it('throws on an invalid plugin set (duplicate names)', () => {

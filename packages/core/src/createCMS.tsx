@@ -5,6 +5,12 @@ import { buildRegistry } from './registry'
 import { createDb } from './db'
 import { createAuth } from './auth'
 import { AdminShell } from './AdminShell'
+import coreV001 from './migrations/V001_core.sql?raw'
+
+// The kernel's own base migration: creates schema_migrations + is_admin() + the
+// site/cms settings tables that every plugin's RLS depends on. It must lead the
+// composed migration list, so createCMS prepends it.
+const CORE_MIGRATION: MigrationDef = { id: 'core.V001', sql: coreV001 }
 
 export interface CMSInstance {
   Router: () => ReactElement
@@ -40,5 +46,5 @@ export function createCMS(config: {
     )
   }
 
-  return { Router, migrations: registry.migrations }
+  return { Router, migrations: [CORE_MIGRATION, ...registry.migrations] }
 }
