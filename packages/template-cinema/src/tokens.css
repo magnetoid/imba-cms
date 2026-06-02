@@ -1,0 +1,225 @@
+/* @imba/template-cinema — design tokens & utility classes.
+   Extracted from imba-production/src/index.css (Editorial Cinema system):
+   light canvas default + dark cinema panels, one-sans magazine typography.
+   NOTE: the host app supplies @tailwind base/components/utilities + fonts;
+   this file ships only the cinema template's CSS variables + bespoke classes. */
+
+:root {
+  /* ── Editorial Cinema palette (current source of truth) ── */
+  --canvas:    #F4F1EC;
+  --paper:     #FFFFFF;
+  --ink:       #15140F;
+  --ink-dim:   #5C5856;
+  --ink-faint: #908A82;
+  --hairline:  rgba(21, 20, 15, 0.10);
+  --hairline-strong: rgba(21, 20, 15, 0.18);
+
+  --cinema:        #0E0E0E;
+  --cinema-2:      #161614;
+  --paper-cinema:  #E8E5DE;
+  --hairline-cinema: rgba(232, 229, 222, 0.12);
+
+  --ink-navy:  #2D4A5A;
+
+  /* ── Legacy "cyber/cinema" accent tokens (kept for template fidelity) ── */
+  --ember: #E87A2A;
+  --cyber: #00D4FF;
+  --gold:  #C9A96E;
+  --smoke: #E8E8E8;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Typography primitives
+   ────────────────────────────────────────────────────────────── */
+.editorial-hero {
+  font-family: 'Inter Tight', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+.editorial-h2 {
+  font-family: 'Inter Tight', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+.editorial-h3 {
+  font-family: 'Inter Tight', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.editorial-lead {
+  font-family: 'Inter Tight', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1.3rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Layout helpers
+   ────────────────────────────────────────────────────────────── */
+.section-py {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+}
+@media (min-width: 1024px) {
+  .section-py {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+}
+
+/* Cinema panel — wraps hero / selected-work with dark theme */
+.cinema-panel {
+  background: var(--cinema);
+  color: var(--paper-cinema);
+}
+.cinema-panel ::selection { background: rgba(232, 229, 222, 0.20); color: var(--paper-cinema); }
+
+/* ──────────────────────────────────────────────────────────────
+   Eyebrow / label
+   ────────────────────────────────────────────────────────────── */
+.eyebrow,
+.editorial-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.eyebrow::before,
+.editorial-label::before {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
+}
+.cinema-panel .editorial-label { color: var(--paper-cinema); }
+
+/* Legacy cyber-accented eyebrow (alias) */
+.eyebrow-cyber {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--cyber);
+}
+.eyebrow-cyber::before {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 1px;
+  background: var(--cyber);
+  opacity: 0.6;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Buttons — rectangular editorial
+   ────────────────────────────────────────────────────────────── */
+.editorial-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 1rem 1.6rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+}
+.editorial-button:hover {
+  background: var(--ink);
+  color: var(--canvas);
+}
+.editorial-button--primary {
+  background: var(--ink);
+  color: var(--canvas);
+  border-color: var(--ink);
+}
+.editorial-button--primary:hover {
+  background: var(--ink-navy);
+  color: var(--canvas);
+  border-color: var(--ink-navy);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Nav links
+   ────────────────────────────────────────────────────────────── */
+.editorial-nav { background: transparent; }
+.editorial-nav__link {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--ink-dim);
+  padding: 0.4rem 0;
+  position: relative;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.editorial-nav__link:hover,
+.editorial-nav__link.is-active { color: var(--ink); }
+.editorial-nav__link.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: var(--ink);
+}
+.cinema-panel .editorial-nav__link { color: rgba(232, 229, 222, 0.65); }
+.cinema-panel .editorial-nav__link:hover,
+.cinema-panel .editorial-nav__link.is-active { color: var(--paper-cinema); }
+
+/* ──────────────────────────────────────────────────────────────
+   Legacy cyber glow / HUD utilities (kept for template fidelity)
+   ────────────────────────────────────────────────────────────── */
+.hud-card {
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  position: relative;
+}
+.glow-cyber { box-shadow: 0 0 24px rgba(0, 212, 255, 0.35); }
+.glow-ember { box-shadow: 0 0 24px rgba(232, 122, 42, 0.35); }
+.holo-shimmer {
+  background: linear-gradient(110deg, var(--cyber), var(--ember), var(--gold));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Skip to content (accessibility)
+   ────────────────────────────────────────────────────────────── */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  background: var(--ink);
+  color: var(--canvas);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.5rem 1rem;
+  z-index: 99999;
+  transition: top 0.2s;
+  text-decoration: none;
+}
+.skip-to-content:focus { top: 1rem; }
