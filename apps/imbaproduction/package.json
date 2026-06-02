@@ -1,0 +1,27 @@
+{
+  "name": "imbaproduction",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@imba/core": "workspace:*",
+    "@imba/plugin-blog": "workspace:*",
+    "@imba/template-cinema": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.0"
+  },
+  "devDependencies": {
+    "@imba/tsconfig": "workspace:*",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "typescript": "^5.4.0",
+    "vite": "^5.0.11"
+  }
+}
