@@ -1,0 +1,10 @@
+{
+  "name": "@imba/tailwind-preset",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.js",
+  "files": ["index.js"],
+  "peerDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
