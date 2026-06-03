@@ -42,6 +42,29 @@ describe('validatePlugins', () => {
     const admin = (p: string) => ({ nav: { group: 'G', label: 'L', path: p }, pages: [] })
     expect(() =>
       validatePlugins([base({ name: 'a', admin: admin('/admin/dup') }), base({ name: 'b', admin: admin('/admin/dup') })]),
-    ).toThrow(/duplicate admin path: \/admin\/dup/i)
+    ).toThrow(/duplicate admin nav path: \/admin\/dup/i)
+  })
+
+  it('allows a plugin nav path to equal one of its own page paths', () => {
+    // Regression: a nav item legitimately points at its landing page (same path).
+    const admin = {
+      nav: { group: 'Content', label: 'Blog', path: '/admin/blog' },
+      pages: [
+        { path: '/admin/blog', element: Page },
+        { path: '/admin/blog/new', element: Page },
+        { path: '/admin/blog/edit/:id', element: Page },
+      ],
+    }
+    expect(() => validatePlugins([base({ name: 'blog', admin })])).not.toThrow()
+  })
+
+  it('throws on duplicate admin page paths', () => {
+    const admin = (nav: string, page: string) => ({ nav: { group: 'G', label: 'L', path: nav }, pages: [{ path: page, element: Page }] })
+    expect(() =>
+      validatePlugins([
+        base({ name: 'a', admin: admin('/admin/a', '/admin/x') }),
+        base({ name: 'b', admin: admin('/admin/b', '/admin/x') }),
+      ]),
+    ).toThrow(/duplicate admin page path: \/admin\/x/i)
   })
 })

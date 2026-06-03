@@ -29,14 +29,18 @@ export function validatePlugins(plugins: Plugin[]): void {
     }
   }
 
-  const adminPaths = new Set<string>()
+  // Nav paths and page paths are separate namespaces: a nav item legitimately
+  // points at its own landing page (same path), so they must not collide-check
+  // against each other. Reject only duplicate nav paths or duplicate page paths.
+  const adminNavPaths = new Set<string>()
+  const adminPagePaths = new Set<string>()
   for (const p of plugins) {
     if (!p.admin) continue
-    if (adminPaths.has(p.admin.nav.path)) throw new Error(`Duplicate admin path: ${p.admin.nav.path}`)
-    adminPaths.add(p.admin.nav.path)
+    if (adminNavPaths.has(p.admin.nav.path)) throw new Error(`Duplicate admin nav path: ${p.admin.nav.path}`)
+    adminNavPaths.add(p.admin.nav.path)
     for (const page of p.admin.pages) {
-      if (adminPaths.has(page.path)) throw new Error(`Duplicate admin path: ${page.path}`)
-      adminPaths.add(page.path)
+      if (adminPagePaths.has(page.path)) throw new Error(`Duplicate admin page path: ${page.path}`)
+      adminPagePaths.add(page.path)
     }
   }
 }
