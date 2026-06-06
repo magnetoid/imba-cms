@@ -1,0 +1,18 @@
+{
+  "name": "@imba/template-mtio",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run", "lint": "eslint src --ext ts,tsx" },
+  "dependencies": { "@imba/core": "workspace:*", "@imba/ui": "workspace:*", "lucide-react": "^0.309.0" },
+  "peerDependencies": { "react": "^18.2.0", "react-router-dom": "^6.21.0" },
+  "devDependencies": {
+    "@imba/tsconfig": "workspace:*",
+    "@types/react": "^18.2.48",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.0",
+    "typescript": "^5.4.0"
+  }
+}
