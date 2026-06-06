@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { blogDb } from './blogClient'
+import { blogContent } from './blogContent'
 import type { BlogPost } from '../types'
 
 const STATIC_POSTS = [
@@ -217,6 +218,9 @@ export default function Blog() {
   // Reset to page 1 whenever the active filter changes or the dataset changes size.
   useEffect(() => { setPage(1) }, [activeCategory, gridList.length])
 
+  const content = blogContent()
+  const ctaExternal = /^(mailto:|https?:)/.test(content.ctaHref)
+
   return (
     <>
       {/* ── PAGE HERO ─────────────────────────────────────── */}
@@ -229,15 +233,15 @@ export default function Blog() {
           style={{ background: 'radial-gradient(ellipse 60% 70% at 100% 30%, rgba(255,255,255,0.05) 0%, transparent 65%)' }}
         />
         <div className="relative max-w-screen-xl mx-auto">
-          <p className="eyebrow mb-5 reveal">Video production insights</p>
+          <p className="eyebrow mb-5 reveal">{content.heroEyebrow}</p>
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <h1 className="font-display font-bold leading-none reveal reveal-delay-1"
               style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)' }}>
-              Expert tips,<br />
-              <em className="italic">real results</em>
+              {content.heroTitle}<br />
+              <em className="italic">{content.heroTitleEm}</em>
             </h1>
             <p className="text-smoke-dim max-w-xs leading-relaxed reveal reveal-delay-2" style={{ fontSize: '0.93rem' }}>
-              185+ articles on video production, AI, TikTok strategy, and converting views into sales.
+              {content.heroSubtitle}
             </p>
           </div>
         </div>
@@ -444,14 +448,9 @@ export default function Blog() {
       {/* ── TOPICS STRIP ─────────────────────────────────── */}
       <section className="bg-ink-2 py-16 px-6 lg:px-12 border-t border-white/5">
         <div className="max-w-screen-xl mx-auto">
-          <p className="font-mono-custom text-[0.62rem] tracking-[0.2em] uppercase text-smoke-faint/50 mb-8 text-center">Content pillars</p>
+          <p className="font-mono-custom text-[0.62rem] tracking-[0.2em] uppercase text-smoke-faint/50 mb-8 text-center">{content.pillarsLabel}</p>
           <div className="flex flex-wrap justify-center gap-3">
-            {[
-              'AI & Generative Video', 'TikTok Content Strategy', 'Cooking Video Production',
-              'eCommerce Product Video', 'YouTube Growth', 'Brand Film Craft',
-              'Video Equipment & Tech', 'Video SEO', 'Short-Form Content',
-              'Post Production', 'Drone Cinematography', 'eLearning Video',
-            ].map(topic => (
+            {content.pillars.map(topic => (
               <span key={topic}
                 className="font-mono-custom text-[0.62rem] tracking-[0.12em] uppercase px-3 py-2 border border-white/8 text-smoke-faint/50 hover:text-smoke-faint hover:border-white/15 transition-colors cursor-default">
                 {topic}
@@ -469,16 +468,23 @@ export default function Blog() {
         <div className="relative px-6 lg:px-12 py-20 max-w-screen-xl mx-auto flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           <div>
             <h2 className="display-md text-paper" style={{ fontSize: 'clamp(2.2rem, 4vw, 3.6rem)' }}>
-              Ready to make something memorable?
+              {content.ctaTitle}
             </h2>
             <p className="text-paper-dim mt-3 max-w-md" style={{ fontSize: '0.98rem' }}>
-              Talk to our team. Free quote, 24h reply, no commitment.
+              {content.ctaSubtitle}
             </p>
           </div>
-          <Link to="/contact" className="pill-button pill-button--primary">
-            <span>Get in Touch</span>
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-current/20">→</span>
-          </Link>
+          {ctaExternal ? (
+            <a href={content.ctaHref} className="pill-button pill-button--primary">
+              <span>{content.ctaButtonLabel}</span>
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-current/20">→</span>
+            </a>
+          ) : (
+            <Link to={content.ctaHref} className="pill-button pill-button--primary">
+              <span>{content.ctaButtonLabel}</span>
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-current/20">→</span>
+            </Link>
+          )}
         </div>
       </section>
     </>

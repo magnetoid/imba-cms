@@ -1,6 +1,8 @@
 import { definePlugin } from '@imba/core'
 import V001_blog from './migrations/V001_blog.sql?raw'
 import { setBlogDb } from './public/blogClient'
+export { setBlogContent } from './public/blogContent'
+export type { BlogContent } from './public/blogContent'
 import Blog from './public/Blog'
 import BlogPost from './public/BlogPost'
 import BlogAdmin from './admin/BlogAdmin'
