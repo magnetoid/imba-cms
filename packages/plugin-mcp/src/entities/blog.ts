@@ -13,8 +13,9 @@ export const POSTS_TABLE = 'blog_posts'
 export const CATEGORIES_TABLE = 'blog_categories'
 
 /** Status values understood by the blog schema (`status` column). */
-export const blogStatusSchema = z.enum(['draft', 'published', 'scheduled'])
+export const blogStatusSchema = z.enum(['draft', 'in_review', 'approved', 'scheduled', 'published', 'archived'])
 export type BlogStatus = z.infer<typeof blogStatusSchema>
+const isoDateTimeSchema = z.string().datetime({ offset: true }).nullable().optional()
 
 const slug = z
   .string()
@@ -32,6 +33,8 @@ const postFields = {
   tags: z.array(z.string()).optional(),
   status: blogStatusSchema.optional(),
   published: z.boolean().optional(),
+  published_at: isoDateTimeSchema,
+  scheduled_for: isoDateTimeSchema,
   seo_title: z.string().nullable().optional(),
   seo_description: z.string().nullable().optional(),
   cover_image_url: z.string().nullable().optional(),
@@ -71,6 +74,8 @@ export const updatePostSchema = z.object({
       tags: postFields.tags,
       status: postFields.status,
       published: postFields.published,
+      published_at: postFields.published_at,
+      scheduled_for: postFields.scheduled_for,
       seo_title: postFields.seo_title,
       seo_description: postFields.seo_description,
       cover_image_url: postFields.cover_image_url,
@@ -99,6 +104,110 @@ export type SetPublishedArgs = z.infer<typeof setPublishedSchema>
 function unwrap<T>(res: { data: T; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message)
   return res.data
+}
+
+function normalizePostWrite<
+  T extends {
+    status?: BlogStatus
+    published?: boolean
+    published_at?: string | null
+    scheduled_for?: string | null
+  },
+>(input: T): T & {
+  status: BlogStatus
+  published: boolean
+  published_at: string | null
+  scheduled_for: string | null
+} {
+  const now = new Date().toISOString()
+  let status = input.status ?? (input.published ? 'published' : 'draft')
+  let published = input.published ?? false
+  let publishedAt = input.published_at ?? null
+  let scheduledFor = input.scheduled_for ?? null
+
+  if (status === 'scheduled' && scheduledFor && Date.parse(scheduledFor) <= Date.parse(now)) {
+    status = 'published'
+  }
+
+  if (status === 'published' || published) {
+    status = 'published'
+    published = true
+    publishedAt = publishedAt ?? now
+    scheduledFor = null
+  } else if (status === 'scheduled') {
+    published = false
+    publishedAt = null
+    scheduledFor = scheduledFor ?? now
+  } else {
+    published = false
+    publishedAt = null
+    scheduledFor = null
+  }
+
+  return {
+    ...input,
+    status,
+    published,
+    published_at: publishedAt,
+    scheduled_for: scheduledFor,
+  }
+}
+
+function normalizeWorkflowPatch(input: {
+  status?: BlogStatus
+  published?: boolean
+  published_at?: string | null
+  scheduled_for?: string | null
+}) {
+  const now = new Date().toISOString()
+
+  if (input.status === 'published' || input.published === true) {
+    return {
+      status: 'published' as const,
+      published: true,
+      published_at: input.published_at ?? now,
+      scheduled_for: null,
+    }
+  }
+
+  if (input.status === 'scheduled' || input.scheduled_for) {
+    const scheduledFor = input.scheduled_for ?? now
+    if (Date.parse(scheduledFor) <= Date.parse(now)) {
+      return {
+        status: 'published' as const,
+        published: true,
+        published_at: input.published_at ?? scheduledFor,
+        scheduled_for: null,
+      }
+    }
+
+    return {
+      status: 'scheduled' as const,
+      published: false,
+      published_at: null,
+      scheduled_for: scheduledFor,
+    }
+  }
+
+  if (input.status && ['draft', 'in_review', 'approved', 'archived'].includes(input.status)) {
+    return {
+      status: input.status,
+      published: false,
+      published_at: null,
+      scheduled_for: null,
+    }
+  }
+
+  if (input.published === false) {
+    return {
+      status: 'draft' as const,
+      published: false,
+      published_at: null,
+      scheduled_for: null,
+    }
+  }
+
+  return {}
 }
 
 // ── Read operations ─────────────────────────────────────────────────────────
@@ -136,16 +245,17 @@ export async function listCategories(db: Db) {
 // ── Write operations ────────────────────────────────────────────────────────
 
 export async function createPost(db: Db, input: CreatePostInput) {
-  const payload = createPostSchema.parse(input)
+  const payload = normalizePostWrite(createPostSchema.parse(input))
   const res = await db.from(POSTS_TABLE).insert(payload).select('*').single()
   return unwrap(res)
 }
 
 export async function updatePost(db: Db, args: UpdatePostArgs) {
   const { id, patch } = updatePostSchema.parse(args)
+  const workflowPatch = normalizeWorkflowPatch(patch)
   const res = await db
     .from(POSTS_TABLE)
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({ ...patch, ...workflowPatch, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*')
     .single()
@@ -161,14 +271,12 @@ export async function deletePost(db: Db, id: string) {
 
 export async function setPublished(db: Db, args: SetPublishedArgs) {
   const { id, published } = setPublishedSchema.parse(args)
-  const now = new Date().toISOString()
+  const payload = normalizePostWrite({ published, status: published ? 'published' : 'draft' })
   const res = await db
     .from(POSTS_TABLE)
     .update({
-      published,
-      status: published ? 'published' : 'draft',
-      published_at: published ? now : null,
-      updated_at: now,
+      ...payload,
+      updated_at: new Date().toISOString(),
     })
     .eq('id', id)
     .select('*')

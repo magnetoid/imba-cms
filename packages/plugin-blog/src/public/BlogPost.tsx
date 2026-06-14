@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Navigate, Link } from 'react-router-dom'
-import { blogDb } from './blogClient'
+import { useDocumentSeo, useThemeConfig } from '@imba/core'
+import { blogPublicClient } from './blogClient'
 import type { BlogPost as BlogPostType } from '../types'
 import { marked } from 'marked'
 
@@ -24,31 +25,56 @@ const CAT_COLOR: Record<string, string> = {
   'eCommerce': '#FAFAFA',
 }
 
+function sanitizeHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.querySelectorAll('script, style, iframe, object, embed').forEach((node) => node.remove())
+  doc.querySelectorAll('*').forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase()
+      const value = attribute.value.trim()
+      if (name.startsWith('on')) {
+        element.removeAttribute(attribute.name)
+      }
+      if ((name === 'href' || name === 'src') && /^javascript:/i.test(value)) {
+        element.removeAttribute(attribute.name)
+      }
+    })
+  })
+  return doc.body.innerHTML
+}
+
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>()
+  const theme = useThemeConfig()
   const [post, setPost] = useState<BlogPostType | null | undefined>(undefined)
   const [bodyHtml, setBodyHtml] = useState('')
   const [copied, setCopied] = useState(false)
   const { openModal } = useQuoteModal()
+  useDocumentSeo({
+    title: post?.seo_title || post?.title,
+    description: post?.seo_description || post?.excerpt || undefined,
+    image: post?.og_image_url || post?.featured_image_url || post?.cover_image_url,
+    type: post ? 'article' : 'website',
+    siteUrl: theme.siteUrl,
+    canonicalPath: slug ? `/blog/${slug}` : '/blog',
+  })
 
   useEffect(() => {
     if (!slug) { setPost(null); return }
-    blogDb().from('blog_posts')
-      .select('*, blog_categories(name, slug)')
-      .eq('slug', slug)
-      .eq('published', true)
-      .single()
-      .then(({ data }) => {
+    blogPublicClient()
+      .getPublishedPostBySlug(slug)
+      .then((data) => {
         setPost(data || null)
         if (data?.body) {
           const result = marked.parse(data.body)
           if (typeof result === 'string') {
-            setBodyHtml(result)
+            setBodyHtml(sanitizeHtml(result))
           } else {
-            result.then(html => setBodyHtml(html))
+            result.then(html => setBodyHtml(sanitizeHtml(html)))
           }
         }
       })
+      .catch(() => setPost(null))
   }, [slug])
 
   // Loading
@@ -71,6 +97,9 @@ export default function BlogPost() {
   const formattedDate = post.published_at
     ? new Date(post.published_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : new Date(post.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  const shareBaseUrl = theme.siteUrl
+    ?? (typeof window !== 'undefined' ? window.location.origin : 'https://example.com')
+  const shareUrl = `${shareBaseUrl}/blog/${post.slug}`
 
   return (
     <>
@@ -159,15 +188,15 @@ export default function BlogPost() {
                 {[
                   {
                     label: 'Share on X / Twitter',
-                    href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(`https://imbaproduction.com/blog/${post.slug}`)}&text=${encodeURIComponent(post.title)}`,
+                    href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`,
                   },
                   {
                     label: 'Share on LinkedIn',
-                    href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://imbaproduction.com/blog/${post.slug}`)}`,
+                    href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
                   },
                   {
                     label: 'Share on Facebook',
-                    href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://imbaproduction.com/blog/${post.slug}`)}`,
+                    href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
                   },
                 ].map(({ label, href }) => (
                   <a
@@ -182,7 +211,7 @@ export default function BlogPost() {
                 ))}
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://imbaproduction.com/blog/${post.slug}`)
+                    navigator.clipboard.writeText(shareUrl)
                     setCopied(true)
                     setTimeout(() => setCopied(false), 2000)
                   }}

@@ -1,4 +1,10 @@
-export { readConfig, createServiceClient, type McpConfig } from './config.js'
+export {
+  readConfig,
+  createServiceClient,
+  DEFAULT_MCP_CAPABILITIES,
+  type McpAuthMode,
+  type McpConfig,
+} from './config.js'
 export { buildMcpServer, SERVER_NAME, SERVER_VERSION, TOOL_NAMES } from './server.js'
 export {
   // entity functions

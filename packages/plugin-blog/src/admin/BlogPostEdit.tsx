@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
 import { blogDb } from '../public/blogClient'
-import type { BlogCategory } from '../types'
+import type { BlogCategory, BlogPostStatus } from '../types'
 import {
   Button, Input, Label, Textarea, Switch, Separator,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -23,7 +24,8 @@ const EMPTY_FORM = {
   tags: [] as string[],
   read_time_minutes: 5,
   published: false,
-  status: 'draft' as 'draft' | 'published' | 'scheduled',
+  status: 'draft' as BlogPostStatus,
+  scheduled_for: '',
   author_name: '',
   seo_title: '',
   seo_description: '',
@@ -31,6 +33,15 @@ const EMPTY_FORM = {
 }
 
 type FormState = typeof EMPTY_FORM
+
+const BLOG_STATUS_OPTIONS: Array<{ value: BlogPostStatus; label: string }> = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'in_review', label: 'In review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'published', label: 'Published' },
+  { value: 'archived', label: 'Archived' },
+]
 
 function toSlug(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -82,9 +93,80 @@ function levelSkipWarning(outline: OutlineNode[]): string | null {
   return null
 }
 
+function toDateTimeLocalValue(value?: string): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+function normalizeWorkflowState(form: FormState): {
+  error: string
+  payload?: never
+} | {
+  error?: never
+  payload: {
+    status: BlogPostStatus
+    published: boolean
+    published_at: string | null
+    scheduled_for: string | null
+  }
+} {
+  const now = new Date().toISOString()
+  const scheduledFor = form.scheduled_for
+    ? new Date(form.scheduled_for).toISOString()
+    : null
+
+  if (form.status === 'scheduled') {
+    if (!scheduledFor) {
+      return { error: 'Scheduled posts need a publish date and time.' }
+    }
+    if (Date.parse(scheduledFor) <= Date.now()) {
+      return {
+        payload: {
+          status: 'published' as BlogPostStatus,
+          published: true,
+          published_at: scheduledFor,
+          scheduled_for: null,
+        },
+      }
+    }
+    return {
+      payload: {
+        status: 'scheduled' as BlogPostStatus,
+        published: false,
+        published_at: null,
+        scheduled_for: scheduledFor,
+      },
+    }
+  }
+
+  if (form.status === 'published' || form.published) {
+    return {
+      payload: {
+        status: 'published' as BlogPostStatus,
+        published: true,
+        published_at: now,
+        scheduled_for: null,
+      },
+    }
+  }
+
+  return {
+    payload: {
+      status: form.status,
+      published: false,
+      published_at: null,
+      scheduled_for: null,
+    },
+  }
+}
+
 export default function BlogPostEdit() {
   const navigate = useNavigate()
   const location = useLocation()
+  const session = useCmsSession()
   const { id } = useParams<{ id?: string }>()
   const isEdit = Boolean(id)
 
@@ -98,6 +180,8 @@ export default function BlogPostEdit() {
   const [showOutline, setShowOutline] = useState(true)
   const tagInputRef = useRef<HTMLInputElement>(null)
   const prefillApplied = useRef(false)
+  const canWrite = hasCapability(session, CMS_CAPABILITIES.blogWrite)
+  const canPublish = hasCapability(session, CMS_CAPABILITIES.blogPublish)
 
   // Track unsaved changes — warn before navigating away
   const [dirty, setDirty] = useState(false)
@@ -138,6 +222,7 @@ export default function BlogPostEdit() {
           read_time_minutes: data.read_time_minutes ?? 5,
           published: data.published,
           status: data.status || 'draft',
+          scheduled_for: toDateTimeLocalValue(data.scheduled_for),
           author_name: data.author_name || '',
           seo_title: data.seo_title || '',
           seo_description: data.seo_description || '',
@@ -178,7 +263,22 @@ export default function BlogPostEdit() {
 
   async function handleSave(e?: React.FormEvent) {
     e?.preventDefault()
+    if (!canWrite) { setError('You do not have permission to edit blog posts.'); return }
     if (!form.title.trim()) { setError('Title is required'); return }
+    const workflow = normalizeWorkflowState(form)
+    if (workflow.error) {
+      setError(workflow.error)
+      return
+    }
+    if (!workflow.payload) {
+      setError('Unable to determine the publishing workflow state.')
+      return
+    }
+    const workflowPayload = workflow.payload
+    if (!canPublish && (workflowPayload.published || workflowPayload.status === 'scheduled')) {
+      setError('Publishing and scheduling require additional permission.')
+      return
+    }
     setSaving(true)
     setError('')
     const payload = {
@@ -192,13 +292,14 @@ export default function BlogPostEdit() {
       category_id: form.category_id || null,
       tags: form.tags,
       read_time_minutes: form.read_time_minutes,
-      published: form.published,
-      status: form.status,
+      published: workflowPayload.published,
+      status: workflowPayload.status,
       author_name: form.author_name,
       seo_title: form.seo_title,
       seo_description: form.seo_description,
       og_image_url: form.og_image_url,
-      published_at: form.published ? new Date().toISOString() : null,
+      published_at: workflowPayload.published_at,
+      scheduled_for: workflowPayload.scheduled_for,
     }
     if (isEdit) {
       const { error: err } = await blogDb().from('blog_posts').update(payload).eq('id', id!)
@@ -261,7 +362,7 @@ export default function BlogPostEdit() {
               {wordCount} words · ~{estReadMin} min
             </span>
             <Button type="button" variant="ghost" onClick={cancel}>Cancel</Button>
-            <Button onClick={() => handleSave()} disabled={saving}>
+            <Button onClick={() => handleSave()} disabled={saving || !canWrite}>
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <><Save className="mr-2 h-4 w-4" />Save</>}
             </Button>
           </div>
@@ -335,17 +436,34 @@ export default function BlogPostEdit() {
 
             {/* Publish */}
             <Section title="Publish">
+              {!canPublish && (
+                <p className="text-xs text-muted-foreground">
+                  You can edit content, but only users with publish permission can publish or schedule posts.
+                </p>
+              )}
               <div className="flex flex-col gap-1.5">
                 <Label>Status</Label>
                 <Select
                   value={form.status}
-                  onValueChange={val => update('status', val as FormState['status'])}
+                  disabled={!canPublish}
+                  onValueChange={val => {
+                    const status = val as FormState['status']
+                    setForm(prev => ({
+                      ...prev,
+                      status,
+                      published: status === 'published',
+                      scheduled_for: status === 'scheduled' ? prev.scheduled_for : '',
+                    }))
+                    setDirty(true)
+                  }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    {BLOG_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -353,13 +471,31 @@ export default function BlogPostEdit() {
                 <Switch
                   id="b-published"
                   checked={form.published}
+                  disabled={!canPublish}
                   onCheckedChange={c => setForm(prev => {
                     setDirty(true)
-                    return { ...prev, published: c, status: c ? 'published' : 'draft' }
+                    return {
+                      ...prev,
+                      published: c,
+                      status: c ? 'published' : (prev.status === 'archived' ? 'archived' : 'draft'),
+                      scheduled_for: c ? '' : prev.scheduled_for,
+                    }
                   })}
                 />
                 <Label htmlFor="b-published">Published</Label>
               </div>
+              {form.status === 'scheduled' && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="b-scheduled-for">Schedule publish time</Label>
+                  <Input
+                    id="b-scheduled-for"
+                    type="datetime-local"
+                    value={form.scheduled_for}
+                    disabled={!canPublish}
+                    onChange={e => update('scheduled_for', e.target.value)}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="b-author">Author</Label>

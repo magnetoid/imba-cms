@@ -7,6 +7,18 @@ describe('type contracts', () => {
     expect(p.name).toBe('demo')
   })
 
+  it('Plugin supports optional compatibility metadata', () => {
+    const p: Plugin = {
+      name: 'demo',
+      version: '0.0.0',
+      compatibility: {
+        pluginApiVersion: '1',
+        runtime: { admin: true, public: false, server: true },
+      },
+    }
+    expect(p.compatibility?.runtime?.admin).toBe(true)
+  })
+
   it('a minimal Template object satisfies the Template type', () => {
     const Public = () => null
     const t: Template = { name: 'bare', layouts: { Public } }

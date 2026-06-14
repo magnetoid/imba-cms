@@ -1,3 +1,11 @@
+export type BlogPostStatus =
+  | 'draft'
+  | 'in_review'
+  | 'approved'
+  | 'scheduled'
+  | 'published'
+  | 'archived'
+
 export interface BlogPost {
   id: string
   title: string
@@ -13,8 +21,12 @@ export interface BlogPost {
   read_time_minutes?: number
   published: boolean
   published_at?: string
+  first_published_at?: string
+  scheduled_for?: string
+  last_reviewed_at?: string
   created_at: string
-  status?: 'draft' | 'published' | 'scheduled'
+  updated_at?: string
+  status?: BlogPostStatus
   author_name?: string
   og_image_url?: string
   category_id?: string

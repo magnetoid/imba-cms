@@ -1,6 +1,6 @@
 import type { MigrationDef, Plugin } from './types'
 
-export function orderMigrations(plugins: Plugin[]): MigrationDef[] {
+export function orderPlugins(plugins: Plugin[]): Plugin[] {
   // Topological sort of plugins by dependsOn (Kahn's algorithm).
   const byName = new Map(plugins.map((p) => [p.name, p]))
   const indegree = new Map<string, number>(plugins.map((p) => [p.name, 0]))
@@ -25,12 +25,18 @@ export function orderMigrations(plugins: Plugin[]): MigrationDef[] {
     }
     queue.sort()
   }
-  if (order.length !== plugins.length) throw new Error('Migration ordering failed: dependency cycle detected')
+  if (order.length !== plugins.length) throw new Error('Plugin ordering failed: dependency cycle detected')
+
+  return order.map((name) => byName.get(name)!)
+}
+
+export function orderMigrations(plugins: Plugin[]): MigrationDef[] {
+  const orderedPlugins = orderPlugins(plugins)
 
   const seen = new Set<string>()
   const result: MigrationDef[] = []
-  for (const name of order) {
-    const migrations = [...(byName.get(name)!.migrations ?? [])].sort((a, b) => a.id.localeCompare(b.id))
+  for (const plugin of orderedPlugins) {
+    const migrations = [...(plugin.migrations ?? [])].sort((a, b) => a.id.localeCompare(b.id))
     for (const m of migrations) {
       if (seen.has(m.id)) throw new Error(`Duplicate migration id: ${m.id}`)
       seen.add(m.id)

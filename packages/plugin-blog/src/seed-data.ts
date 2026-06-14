@@ -23,7 +23,7 @@ export interface SeedPost {
   tags: string[]
   read_time_minutes: number
   published: boolean
-  status: 'draft' | 'published' | 'scheduled'
+  status: 'draft' | 'in_review' | 'approved' | 'scheduled' | 'published' | 'archived'
   published_at: string // ISO date
 }
 

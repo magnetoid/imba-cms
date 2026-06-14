@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { blogDb } from './blogClient'
+import { useDocumentSeo } from '@imba/core'
+import { blogPublicClient } from './blogClient'
 import type { BlogPost } from '../types'
 
 const STATIC_POSTS = [
@@ -175,19 +176,21 @@ export default function Blog() {
   const [livePosts, setLivePosts] = useState<DisplayPost[] | null>(null)
   const [fetchFailed, setFetchFailed] = useState(false)
   const [page, setPage] = useState(1)
+  useDocumentSeo({
+    title: 'Blog',
+    description: 'Expert writing on video production, AI workflows, TikTok strategy, and turning views into sales.',
+    canonicalPath: '/blog',
+  })
 
   useEffect(() => {
-    blogDb().from('blog_posts')
-      .select('*, blog_categories(name, slug)')
-      .eq('published', true)
-      .order('published_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
+    blogPublicClient()
+      .listPublishedPosts()
+      .then((data) => {
+        setLivePosts((data || []).map(toDisplayPost))
+      })
+      .catch(() => {
           setFetchFailed(true)
           setLivePosts(null)
-        } else {
-          setLivePosts((data || []).map(toDisplayPost))
-        }
       })
   }, [])
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { CMS_CAPABILITIES } from '../../core/src/permissions.js'
 
 import { buildMcpServer, TOOL_NAMES } from './server.js'
 import type { Db } from './entities/blog.js'
@@ -32,5 +33,28 @@ describe('buildMcpServer', () => {
     // static resource: posts list; templated resource: single post by slug
     expect(Object.keys(inner._registeredResources).length).toBeGreaterThanOrEqual(1)
     expect(Object.keys(inner._registeredResourceTemplates).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('filters write tools when only read capability is allowed', () => {
+    const server = buildMcpServer(stubDb, {
+      allowedCapabilities: [CMS_CAPABILITIES.blogRead],
+    })
+    const registered = (server as unknown as { _registeredTools: Record<string, unknown> })._registeredTools
+    expect(Object.keys(registered).sort()).toEqual([
+      'blog_get_post',
+      'blog_list_categories',
+      'blog_list_posts',
+      'blog_search_posts',
+    ])
+  })
+
+  it('exposes publish tooling only when publish capability is allowed', () => {
+    const server = buildMcpServer(stubDb, {
+      allowedCapabilities: [CMS_CAPABILITIES.blogRead, CMS_CAPABILITIES.blogPublish],
+    })
+    const registered = (server as unknown as { _registeredTools: Record<string, unknown> })._registeredTools
+    expect(Object.keys(registered)).toContain('blog_set_published')
+    expect(Object.keys(registered)).not.toContain('blog_delete_post')
+    expect(Object.keys(registered)).not.toContain('blog_create_post')
   })
 })

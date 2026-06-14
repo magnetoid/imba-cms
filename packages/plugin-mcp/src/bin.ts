@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createServer } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -9,6 +9,32 @@ import { readConfig, createServiceClient } from './config.js'
 import { buildMcpServer, SERVER_NAME, SERVER_VERSION } from './server.js'
 
 const DEFAULT_PORT = 8765
+
+function expectedBasicHeader(username: string, password: string) {
+  return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+}
+
+function isAuthorizedHttpRequest(req: IncomingMessage, config: ReturnType<typeof readConfig>) {
+  if (config.authMode === 'none') return true
+
+  const authorization = req.headers.authorization?.trim()
+  if (!authorization) return false
+
+  if (config.authMode === 'bearer') {
+    return authorization === `Bearer ${config.bearerToken}`
+  }
+
+  return authorization === expectedBasicHeader(config.basicUsername ?? '', config.basicPassword ?? '')
+}
+
+function writeUnauthorized(res: ServerResponse, config: ReturnType<typeof readConfig>) {
+  res.statusCode = 401
+  const headerValue = config.authMode === 'basic'
+    ? 'Basic realm="imba-mcp"'
+    : 'Bearer realm="imba-mcp"'
+  res.setHeader('WWW-Authenticate', headerValue)
+  res.end('Unauthorized')
+}
 
 interface Cli {
   http: boolean
@@ -52,6 +78,11 @@ Usage:
 Environment (required unless --help):
   IMBA_SUPABASE_URL               (or SUPABASE_URL)
   IMBA_SUPABASE_SERVICE_ROLE_KEY  (or SUPABASE_SERVICE_ROLE_KEY)
+  IMBA_MCP_AUTH_MODE              optional: none | bearer | basic
+  IMBA_MCP_BEARER_TOKEN           required when auth mode is bearer
+  IMBA_MCP_BASIC_USERNAME         required when auth mode is basic
+  IMBA_MCP_BASIC_PASSWORD         required when auth mode is basic
+  IMBA_MCP_ALLOWED_CAPABILITIES   optional comma-separated tool scope override
 
 The service-role key is used server-side only and is never exposed through any
 tool argument or response. Exposed tools:
@@ -65,7 +96,7 @@ Exposed resources:
 async function startStdio(): Promise<void> {
   const config = readConfig()
   const db = createServiceClient(config)
-  const server = buildMcpServer(db)
+  const server = buildMcpServer(db, { allowedCapabilities: config.allowedCapabilities })
   const transport = new StdioServerTransport()
   await server.connect(transport)
   // stdout is reserved for the protocol; log to stderr.
@@ -75,7 +106,7 @@ async function startStdio(): Promise<void> {
 async function startHttp(port: number): Promise<void> {
   const config = readConfig()
   const db = createServiceClient(config)
-  const server = buildMcpServer(db)
+  const server = buildMcpServer(db, { allowedCapabilities: config.allowedCapabilities })
 
   // Stateful streamable-HTTP: a session id is minted on initialize and echoed
   // back via the Mcp-Session-Id header. A single transport instance is reused
@@ -89,6 +120,10 @@ async function startHttp(port: number): Promise<void> {
     if (req.url !== '/mcp' && req.url !== '/') {
       res.statusCode = 404
       res.end('Not found. POST MCP requests to /mcp')
+      return
+    }
+    if (!isAuthorizedHttpRequest(req, config)) {
+      writeUnauthorized(res, config)
       return
     }
     const chunks: Buffer[] = []

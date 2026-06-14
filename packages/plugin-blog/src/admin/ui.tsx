@@ -180,10 +180,12 @@ function collectItems(node: React.ReactNode): React.ReactElement<SelectItemProps
 export function Select({
   value,
   onValueChange,
+  disabled,
   children,
 }: {
   value?: string
   onValueChange?: (value: string) => void
+  disabled?: boolean
   children: React.ReactNode
 }) {
   const items = collectItems(children)
@@ -191,6 +193,7 @@ export function Select({
     <SelectCtx.Provider value={{ value, onValueChange }}>
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onValueChange?.(e.target.value)}
         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >

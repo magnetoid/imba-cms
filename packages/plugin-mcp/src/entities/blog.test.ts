@@ -162,6 +162,26 @@ describe('createPost', () => {
     const { db } = makeDb({ data: {} })
     await expect(createPost(db, { title: 'T', slug: 'Not A Slug' })).rejects.toThrow()
   })
+
+  it('normalizes scheduled posts into scheduled workflow payloads', async () => {
+    const { db, last } = makeDb({ data: { id: 'scheduled' } })
+    await createPost(db, {
+      title: 'Launch post',
+      slug: 'launch-post',
+      status: 'scheduled',
+      scheduled_for: '2099-01-01T12:00:00.000Z',
+    })
+    const payload = last().payload as {
+      status: string
+      published: boolean
+      published_at: string | null
+      scheduled_for: string | null
+    }
+    expect(payload.status).toBe('scheduled')
+    expect(payload.published).toBe(false)
+    expect(payload.published_at).toBeNull()
+    expect(payload.scheduled_for).toBe('2099-01-01T12:00:00.000Z')
+  })
 })
 
 describe('updatePost', () => {
@@ -174,6 +194,19 @@ describe('updatePost', () => {
     expect(rec.payload).toMatchObject({ title: 'New' })
     expect((rec.payload as { updated_at?: string }).updated_at).toBeTypeOf('string')
     expect(callsTo(rec, 'eq')[0].args).toEqual(['id', '11111111-1111-1111-1111-111111111111'])
+  })
+
+  it('does not inject workflow changes when only non-workflow fields are patched', async () => {
+    const { db, last } = makeDb({ data: { id: 'x', title: 'New' } })
+    await updatePost(db, {
+      id: '11111111-1111-1111-1111-111111111111',
+      patch: { title: 'New' },
+    })
+    const payload = last().payload as Record<string, unknown>
+    expect(payload.title).toBe('New')
+    expect(payload.status).toBeUndefined()
+    expect(payload.published).toBeUndefined()
+    expect(payload.scheduled_for).toBeUndefined()
   })
 
   it('rejects an empty patch (zod)', async () => {

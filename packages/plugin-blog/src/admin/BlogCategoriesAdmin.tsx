@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
 import { blogDb } from '../public/blogClient'
 import type { BlogCategory } from '../types'
 import {
@@ -25,6 +26,7 @@ interface CategoryWithCount extends BlogCategory {
 }
 
 export default function BlogCategoriesAdmin() {
+  const session = useCmsSession()
   const [categories, setCategories] = useState<CategoryWithCount[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -33,6 +35,7 @@ export default function BlogCategoriesAdmin() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [error, setError] = useState('')
   const [postCounts, setPostCounts] = useState<Record<string, number>>({})
+  const canManageCategories = hasCapability(session, CMS_CAPABILITIES.blogCategoriesManage)
 
   async function load() {
     setLoading(true)
@@ -75,6 +78,7 @@ export default function BlogCategoriesAdmin() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (!canManageCategories) { setError('You do not have permission to manage blog categories.'); return }
     if (!form.name.trim()) { setError('Name is required'); return }
     setSaving(true)
     setError('')
@@ -97,6 +101,7 @@ export default function BlogCategoriesAdmin() {
   }
 
   async function handleDelete(id: string) {
+    if (!canManageCategories) { setError('You do not have permission to manage blog categories.'); return }
     if (!confirm('Delete this category? Posts will become uncategorised.')) return
     await blogDb().from('blog_categories').delete().eq('id', id)
     load()
@@ -110,8 +115,13 @@ export default function BlogCategoriesAdmin() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Blog Categories</h1>
           <p className="text-muted-foreground text-sm mt-1">Organise your blog posts</p>
+          {!canManageCategories && (
+            <p className="text-xs text-muted-foreground mt-2">
+              You can view categories, but only users with category management permission can change them.
+            </p>
+          )}
         </div>
-        <Button onClick={startAdd}>
+        <Button onClick={startAdd} disabled={!canManageCategories}>
           <Plus className="h-4 w-4 mr-2" />
           New category
         </Button>
@@ -157,11 +167,11 @@ export default function BlogCategoriesAdmin() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => startEdit(cat)}>
+                    <Button variant="outline" size="sm" onClick={() => startEdit(cat)} disabled={!canManageCategories}>
                       <Pencil className="h-3.5 w-3.5 mr-1" />
                       Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(cat.id)}>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(cat.id)} disabled={!canManageCategories}>
                       <Trash2 className="h-3.5 w-3.5 mr-1" />
                       Delete
                     </Button>
@@ -227,7 +237,7 @@ export default function BlogCategoriesAdmin() {
             {error && <p className="text-destructive text-sm">{error}</p>}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || !canManageCategories}>
                 {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save'}
               </Button>
             </DialogFooter>

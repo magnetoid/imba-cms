@@ -1,4 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { CMS_CAPABILITIES } from '../../core/src/permissions.js'
+import type { CmsCapability } from '../../core/src/types.js'
+
+const MCP_AUTH_MODES = ['none', 'bearer', 'basic'] as const
+export type McpAuthMode = typeof MCP_AUTH_MODES[number]
+
+export const DEFAULT_MCP_CAPABILITIES = [
+  CMS_CAPABILITIES.blogRead,
+  CMS_CAPABILITIES.blogWrite,
+  CMS_CAPABILITIES.blogPublish,
+  CMS_CAPABILITIES.blogDelete,
+] as const satisfies readonly CmsCapability[]
 
 /**
  * Resolved server configuration. The service-role key has full DB access and
@@ -8,6 +20,11 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 export interface McpConfig {
   supabaseUrl: string
   serviceRoleKey: string
+  authMode: McpAuthMode
+  bearerToken?: string
+  basicUsername?: string
+  basicPassword?: string
+  allowedCapabilities: readonly CmsCapability[]
 }
 
 function pickEnv(env: NodeJS.ProcessEnv, ...keys: string[]): string | undefined {
@@ -16,6 +33,29 @@ function pickEnv(env: NodeJS.ProcessEnv, ...keys: string[]): string | undefined 
     if (value && value.trim().length > 0) return value.trim()
   }
   return undefined
+}
+
+function parseAuthMode(value: string | undefined): McpAuthMode {
+  const normalized = value?.trim().toLowerCase()
+  if (!normalized) return 'none'
+  if (MCP_AUTH_MODES.includes(normalized as McpAuthMode)) {
+    return normalized as McpAuthMode
+  }
+  throw new Error(
+    `@imba/plugin-mcp: invalid IMBA_MCP_AUTH_MODE "${value}". ` +
+      `Expected one of: ${MCP_AUTH_MODES.join(', ')}.`,
+  )
+}
+
+function parseCapabilities(value: string | undefined): readonly CmsCapability[] {
+  if (!value) return DEFAULT_MCP_CAPABILITIES
+
+  const capabilities = value
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry): entry is CmsCapability => entry.length > 0)
+
+  return capabilities.length > 0 ? capabilities : DEFAULT_MCP_CAPABILITIES
 }
 
 /**
@@ -30,10 +70,18 @@ function pickEnv(env: NodeJS.ProcessEnv, ...keys: string[]): string | undefined 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   const supabaseUrl = pickEnv(env, 'IMBA_SUPABASE_URL', 'SUPABASE_URL')
   const serviceRoleKey = pickEnv(env, 'IMBA_SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY')
+  const authMode = parseAuthMode(pickEnv(env, 'IMBA_MCP_AUTH_MODE'))
+  const bearerToken = pickEnv(env, 'IMBA_MCP_BEARER_TOKEN')
+  const basicUsername = pickEnv(env, 'IMBA_MCP_BASIC_USERNAME')
+  const basicPassword = pickEnv(env, 'IMBA_MCP_BASIC_PASSWORD')
+  const allowedCapabilities = parseCapabilities(pickEnv(env, 'IMBA_MCP_ALLOWED_CAPABILITIES'))
 
   const missing: string[] = []
   if (!supabaseUrl) missing.push('IMBA_SUPABASE_URL (or SUPABASE_URL)')
   if (!serviceRoleKey) missing.push('IMBA_SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE_KEY)')
+  if (authMode === 'bearer' && !bearerToken) missing.push('IMBA_MCP_BEARER_TOKEN')
+  if (authMode === 'basic' && !basicUsername) missing.push('IMBA_MCP_BASIC_USERNAME')
+  if (authMode === 'basic' && !basicPassword) missing.push('IMBA_MCP_BASIC_PASSWORD')
 
   if (missing.length > 0) {
     throw new Error(
@@ -42,7 +90,15 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
     )
   }
 
-  return { supabaseUrl: supabaseUrl!, serviceRoleKey: serviceRoleKey! }
+  return {
+    supabaseUrl: supabaseUrl!,
+    serviceRoleKey: serviceRoleKey!,
+    authMode,
+    bearerToken,
+    basicUsername,
+    basicPassword,
+    allowedCapabilities,
+  }
 }
 
 /**

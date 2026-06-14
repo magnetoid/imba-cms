@@ -11,6 +11,10 @@ the environment and exposes only the curated tools and resources below. The
 service-role key lives server-side only; it is never accepted as a tool argument
 nor returned in any response.
 
+For hosted HTTP deployments, the server can now enforce:
+- inbound HTTP auth
+- capability-based tool/resource exposure
+
 **v1 scope:** blog content (`blog_posts`, `blog_categories`). The structure is
 built so more entities can be added later, but only blog ships today.
 
@@ -20,8 +24,25 @@ built so more entities can be added later, but only blog ships today.
 | ------------------ | --------------------------------- | ------------------------------ |
 | Supabase URL       | `IMBA_SUPABASE_URL`               | `SUPABASE_URL`                 |
 | Service-role key   | `IMBA_SUPABASE_SERVICE_ROLE_KEY`  | `SUPABASE_SERVICE_ROLE_KEY`    |
+| HTTP auth mode     | `IMBA_MCP_AUTH_MODE`              | none                           |
+| Bearer token       | `IMBA_MCP_BEARER_TOKEN`           | -                              |
+| Basic username     | `IMBA_MCP_BASIC_USERNAME`         | -                              |
+| Basic password     | `IMBA_MCP_BASIC_PASSWORD`         | -                              |
+| Tool capabilities  | `IMBA_MCP_ALLOWED_CAPABILITIES`   | built-in full blog allowlist   |
 
 Both are required to start the server (but **not** for `--help`).
+
+`IMBA_MCP_AUTH_MODE` supports:
+- `none`: no inbound HTTP authentication
+- `bearer`: require `Authorization: Bearer ...`
+- `basic`: require HTTP Basic auth
+
+`IMBA_MCP_ALLOWED_CAPABILITIES` is a comma-separated allowlist controlling
+which MCP tools/resources are exposed at startup. Current blog capability keys:
+- `blog.read`
+- `blog.write`
+- `blog.publish`
+- `blog.delete`
 
 ## Running
 
@@ -44,6 +65,9 @@ node /abs/path/to/packages/plugin-mcp/dist/bin.js
 ```bash
 IMBA_SUPABASE_URL=https://YOUR.supabase.co \
 IMBA_SUPABASE_SERVICE_ROLE_KEY=eyJ... \
+IMBA_MCP_AUTH_MODE=bearer \
+IMBA_MCP_BEARER_TOKEN=replace-me \
+IMBA_MCP_ALLOWED_CAPABILITIES=blog.read,blog.write,blog.publish \
 node /abs/path/to/packages/plugin-mcp/dist/bin.js --http --port 8765
 # MCP endpoint: POST http://localhost:8765/mcp
 ```
@@ -86,7 +110,8 @@ Add to your client's `mcpServers` config (e.g. `~/.cursor/mcp.json`):
 ```
 
 For a remote HTTP deployment, point your client at the streamable-HTTP endpoint
-`http://HOST:8765/mcp` instead of spawning the command.
+`http://HOST:8765/mcp` instead of spawning the command, and send the configured
+auth header if `IMBA_MCP_AUTH_MODE` is `bearer` or `basic`.
 
 ## Exposed tools
 

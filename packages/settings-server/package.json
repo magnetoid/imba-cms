@@ -1,0 +1,31 @@
+{
+  "name": "@imba/settings-server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "bin": {
+    "imba-settings-server": "./dist/bin.js"
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src --ext ts",
+    "dev": "tsx src/bin.ts"
+  },
+  "dependencies": {
+    "@imba/core": "workspace:*",
+    "@imba/plugin-settings": "workspace:*",
+    "@supabase/supabase-js": "^2.39.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@imba/tsconfig": "workspace:*",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}
