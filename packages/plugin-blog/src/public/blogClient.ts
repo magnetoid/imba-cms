@@ -70,8 +70,8 @@ export function createSupabaseBlogPublicClient(db: SupabaseClient): BlogPublicCl
         .select('*, blog_categories(name, slug)')
         .eq('published', true)
         .eq('status', 'published')
-        .lte('published_at', now)
-        .order('published_at', { ascending: false })
+        .or(`published_at.is.null,published_at.lte.${now}`)
+        .order('published_at', { ascending: false, nullsFirst: false })
 
       if (error) throw error
       return (data ?? []) as BlogPost[]
@@ -84,7 +84,7 @@ export function createSupabaseBlogPublicClient(db: SupabaseClient): BlogPublicCl
         .eq('slug', slug)
         .eq('published', true)
         .eq('status', 'published')
-        .lte('published_at', now)
+        .or(`published_at.is.null,published_at.lte.${now}`)
         .maybeSingle()
 
       if (error) throw error

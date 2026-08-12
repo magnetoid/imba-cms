@@ -11,6 +11,7 @@ function makeDb(data: unknown) {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({ data, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
   }
@@ -49,6 +50,35 @@ describe('content delivery helpers', () => {
     })
 
     expect(result).toEqual({ id: '1', slug: 'hello-world', status: 'draft', published: false })
+    expect(chain.or).not.toHaveBeenCalled()
+  })
+
+  it('includes posts with a null published_at', async () => {
+    // The RLS policy `public_read_blog_posts` explicitly allows
+    // `published_at IS NULL`, but the delivery query used `.lte(...)`, which
+    // excludes NULL — so a published, undated post was invisible over the API
+    // while being readable directly from Postgres.
+    const { db, chain } = makeDb([{ id: '1', slug: 'undated', published_at: null }])
+    await listPublishedBlogPosts(db as never)
+
     expect(chain.lte).not.toHaveBeenCalled()
+    expect(chain.or).toHaveBeenCalledWith(expect.stringContaining('published_at.is.null'))
+  })
+
+  it('sorts undated posts last rather than first', async () => {
+    const { db, chain } = makeDb([])
+    await listPublishedBlogPosts(db as never)
+
+    expect(chain.order).toHaveBeenCalledWith('published_at', {
+      ascending: false,
+      nullsFirst: false,
+    })
+  })
+
+  it('applies the same null-inclusive filter to a single post lookup', async () => {
+    const { db, chain } = makeDb({ id: '1', slug: 'undated', published_at: null })
+    await getBlogPostBySlug(db as never, 'undated')
+
+    expect(chain.or).toHaveBeenCalledWith(expect.stringContaining('published_at.is.null'))
   })
 })

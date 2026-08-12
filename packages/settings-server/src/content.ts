@@ -82,8 +82,8 @@ export async function listPublishedBlogPosts(db: ContentDb) {
     .select(BLOG_POST_SELECT)
     .eq('published', true)
     .eq('status', 'published')
-    .lte('published_at', now)
-    .order('published_at', { ascending: false })
+    .or(`published_at.is.null,published_at.lte.${now}`)
+    .order('published_at', { ascending: false, nullsFirst: false })
 
   if (result.error) throw new Error(result.error.message)
   return result.data ?? []
@@ -111,7 +111,7 @@ export async function getBlogPostBySlug(
     query = query
       .eq('published', true)
       .eq('status', 'published')
-      .lte('published_at', now)
+      .or(`published_at.is.null,published_at.lte.${now}`)
   }
 
   const result = await query.maybeSingle()

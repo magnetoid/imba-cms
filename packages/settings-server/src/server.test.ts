@@ -10,6 +10,7 @@ function makeDb() {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({
       data: [{ id: '1', slug: 'hello-world', published: true, status: 'published' }],
       error: null,

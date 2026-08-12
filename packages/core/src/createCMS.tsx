@@ -17,7 +17,12 @@ import coreV005 from './migrations/V005_tighten_reads.sql?raw'
 // The kernel's own base migration: creates schema_migrations + is_admin() + the
 // site/cms settings tables that every plugin's RLS depends on. It must lead the
 // composed migration list, so createCMS prepends it.
-const CORE_MIGRATIONS: MigrationDef[] = [
+//
+// Exported because the release-manifest generator and the migration test
+// harness need the same ordered list the running app composes — deriving it
+// from a filesystem glob instead would silently disagree the moment a migration
+// file is added without being registered here, or vice versa.
+export const CORE_MIGRATIONS: MigrationDef[] = [
   { id: 'core.V001', sql: coreV001 },
   { id: 'core.V002', sql: coreV002 },
   { id: 'core.V003', sql: coreV003 },

@@ -1,8 +1,9 @@
-import { defineConfig } from 'vitest/config'
-export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./vitest.setup.ts'],
-  },
-})
+import { defineConfig, mergeConfig } from 'vitest/config'
+import { sharedTestConfig } from '../../vitest.shared'
+
+export default mergeConfig(
+  sharedTestConfig,
+  defineConfig({
+    test: { environment: 'jsdom', setupFiles: ['./vitest.setup.ts'] },
+  }),
+)
