@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { CMS_CAPABILITIES } from '../../core/src/permissions.js'
-import type { CmsCapability } from '../../core/src/types.js'
+import { CMS_CAPABILITIES } from '@imba/core/node'
+import type { CmsCapability } from '@imba/core/node'
 
 const MCP_AUTH_MODES = ['none', 'bearer', 'basic'] as const
 export type McpAuthMode = typeof MCP_AUTH_MODES[number]

@@ -4,7 +4,7 @@ import {
   allowPrivateOutbound,
   assertOutboundUrlAllowed,
   isPrivateAddress,
-} from './outbound'
+} from './outbound.js'
 
 /** Never let a real lookup happen in these tests. */
 const resolvePublic = vi.fn(async () => ['93.184.216.34'])

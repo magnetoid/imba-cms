@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CMS_CAPABILITIES } from '@imba/core'
+import { CMS_CAPABILITIES } from '@imba/core/node'
 import {
   ForbiddenError,
   UnauthorizedError,
@@ -9,7 +9,7 @@ import {
   requireSettingsAccess,
   resolveServerCapabilities,
   resolveServerSubject,
-} from './auth'
+} from './auth.js'
 
 interface FakeDbOptions {
   role?: string | null

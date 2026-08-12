@@ -1,16 +1,16 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import { CMS_CAPABILITIES } from '@imba/core'
+import { CMS_CAPABILITIES } from '@imba/core/node'
 import {
   graphqlSettingsSchema,
   mcpSettingsSchema,
-} from '@imba/plugin-settings/src/shared'
-import { resolveAllowedOrigin, type SettingsServerConfig } from './config'
+} from '@imba/core/node'
+import { resolveAllowedOrigin, type SettingsServerConfig } from './config.js'
 import {
   getBlogPostBySlug,
   listPublishedBlogPosts,
   previewTokenRequestSchema,
   createPreviewToken,
-} from './content'
+} from './content.js'
 import {
   getGraphqlSettings,
   getMcpSettings,
@@ -18,13 +18,13 @@ import {
   testMcpSettingsConnection,
   updateGraphqlSettings,
   updateMcpSettings,
-} from './service'
+} from './service.js'
 import {
   ForbiddenError,
   UnauthorizedError,
   requireCapabilityAccess,
   requireSettingsAccess,
-} from './auth'
+} from './auth.js'
 
 /** Maps an auth failure to its status code; anything else stays a 400/500. */
 function authStatus(error: unknown): number | null {

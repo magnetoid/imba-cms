@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readConfig, readCorsOrigins, resolveAllowedOrigin } from './config'
+import { readConfig, readCorsOrigins, resolveAllowedOrigin } from './config.js'
 
 const REQUIRED = {
   IMBA_SUPABASE_URL: 'https://project.supabase.co',

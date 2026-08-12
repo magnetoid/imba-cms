@@ -4,8 +4,8 @@ import {
   testGraphqlSettingsConnection,
   updateGraphqlSettings,
   updateMcpSettings,
-} from './service'
-import { clearServerSubjectCache, requireSettingsAccess } from './auth'
+} from './service.js'
+import { clearServerSubjectCache, requireSettingsAccess } from './auth.js'
 
 function makeDb(initial: Record<string, unknown> = {}) {
   const store = new Map(Object.entries(initial))

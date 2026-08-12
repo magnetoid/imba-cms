@@ -1,7 +1,7 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { CMS_CAPABILITIES, hasCapabilities } from '../../core/src/permissions.js'
-import type { CapabilityRequirement } from '../../core/src/types.js'
+import { CMS_CAPABILITIES, hasCapabilities } from '@imba/core/node'
+import type { CapabilityRequirement } from '@imba/core/node'
 
 import { DEFAULT_MCP_CAPABILITIES } from './config.js'
 import {

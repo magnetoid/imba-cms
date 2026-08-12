@@ -2,15 +2,12 @@
   "extends": "@imba/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "noEmit": false,
     "rootDir": "src",
     "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "moduleResolution": "NodeNext",
+    "declaration": true,
+    "noEmit": false,
+    "jsx": "preserve"
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "src/**/*.test.ts"
-  ]
+  "files": ["src/node.ts"]
 }

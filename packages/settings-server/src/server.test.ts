@@ -3,7 +3,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createSettingsHttpHandler } from './server'
+import { createSettingsHttpHandler } from './server.js'
 
 function makeDb() {
   const chain = {

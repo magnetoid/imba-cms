@@ -23,6 +23,16 @@ export { ThemeProvider, ThemeSlot, mergeThemeConfig, useThemeConfig, useThemeSlo
 export { useDocumentSeo, type DocumentSeoOptions } from './seo'
 export { createCMS, createAdminApp, createPublicApp, type CMSInstance } from './createCMS'
 export { composeMigrations, CORE_MIGRATIONS } from './manifest'
+export {
+  graphqlSettingsSchema,
+  mcpSettingsSchema,
+  DEFAULT_GRAPHQL_SETTINGS,
+  DEFAULT_MCP_SETTINGS,
+  type GraphqlSettings,
+  type McpSettings,
+  type AuthMode,
+  type ConnectionTestResult,
+} from './settingsContracts'
 export { initI18n } from './i18n'
 export { planMigrations, applyMigrations } from './cli/migrate'
 export type { ApplyOptions } from './cli/migrate'

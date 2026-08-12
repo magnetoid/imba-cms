@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CMS_CAPABILITIES } from '../../core/src/permissions.js'
+import { CMS_CAPABILITIES } from '@imba/core/node'
 
 import { buildMcpServer, TOOL_NAMES } from './server.js'
 import type { Db } from './entities/blog.js'

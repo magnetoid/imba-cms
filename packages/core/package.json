@@ -7,7 +7,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "eslint src --ext ts,tsx"
+    "lint": "eslint src --ext ts,tsx",
+    "build": "tsc -p tsconfig.node.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -27,5 +28,17 @@
     "jsdom": "^25.0.0",
     "typescript": "^5.4.0",
     "vitest": "^2.1.0"
-  }
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "dist"
+  ]
 }

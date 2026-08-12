@@ -3,7 +3,7 @@ import {
   allowPrivateOutbound,
   assertOutboundUrlAllowed,
   type OutboundGuardOptions,
-} from './outbound'
+} from './outbound.js'
 import {
   type ConnectionTestResult,
   DEFAULT_GRAPHQL_SETTINGS,
@@ -12,7 +12,7 @@ import {
   mcpSettingsSchema,
   type GraphqlSettings,
   type McpSettings,
-} from '@imba/plugin-settings/src/shared'
+} from '@imba/core/node'
 
 const SETTINGS_TABLE = 'cms_private_settings'
 const SETTINGS_KEY = 'config'

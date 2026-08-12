@@ -8,7 +8,7 @@ import {
   type CmsRole,
   type CmsSession,
   type CmsUser,
-} from '@imba/core'
+} from '@imba/core/node'
 
 /**
  * Server-side capability resolution.

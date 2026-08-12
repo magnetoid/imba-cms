@@ -4,7 +4,7 @@ import {
   getBlogPostBySlug,
   listPublishedBlogPosts,
   verifyPreviewToken,
-} from './content'
+} from './content.js'
 
 function makeDb(data: unknown) {
   const chain = {

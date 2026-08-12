@@ -1,4 +1,4 @@
-export { readConfig, createServiceClient, type SettingsServerConfig } from './config'
+export { readConfig, createServiceClient, type SettingsServerConfig } from './config.js'
 export {
   getGraphqlSettings,
   updateGraphqlSettings,
@@ -8,7 +8,7 @@ export {
   testMcpSettingsConnection,
   type GraphqlSettingsResponse,
   type McpSettingsResponse,
-} from './service'
+} from './service.js'
 export {
   requireSettingsAccess,
   requireCapabilityAccess,
@@ -20,12 +20,12 @@ export {
   UnauthorizedError,
   type AuthDb,
   type ServerSubject,
-} from './auth'
+} from './auth.js'
 export {
   createPreviewToken,
   getBlogPostBySlug,
   listPublishedBlogPosts,
   previewTokenRequestSchema,
   verifyPreviewToken,
-} from './content'
-export { createSettingsHttpHandler, startSettingsServer } from './server'
+} from './content.js'
+export { createSettingsHttpHandler, startSettingsServer } from './server.js'

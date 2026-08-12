@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CMS_CAPABILITIES } from '../../core/src/permissions.js'
+import { CMS_CAPABILITIES } from '@imba/core/node'
 import { assertHttpAuthConfigured, DEFAULT_MCP_CAPABILITIES, readConfig } from './config.js'
 
 const baseEnv = {
