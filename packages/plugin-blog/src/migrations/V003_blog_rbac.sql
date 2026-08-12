@@ -175,6 +175,7 @@ grant execute on function public.blog_set_post_status(uuid, text, timestamptz)
 
 -- ── Taxonomy and history ───────────────────────────────────
 drop policy if exists "admin_all_blog_categories" on public.blog_categories;
+drop policy if exists blog_categories_read on public.blog_categories;
 create policy blog_categories_read on public.blog_categories
 for select to anon, authenticated
 using (true);
@@ -186,6 +187,7 @@ using (public.has_capability('blog.categories.manage'))
 with check (public.has_capability('blog.categories.manage'));
 
 drop policy if exists "admin_all_blog_tags" on public.blog_tags;
+drop policy if exists blog_tags_read on public.blog_tags;
 create policy blog_tags_read on public.blog_tags
 for select to anon, authenticated
 using (true);
@@ -196,15 +198,76 @@ for all to authenticated
 using (public.has_capability('blog.categories.manage'))
 with check (public.has_capability('blog.categories.manage'));
 
--- Revisions and the audit log are written by the AFTER trigger, which runs as
--- the row owner. Clients only ever read them, so there is no insert policy:
--- an audit trail its subjects can write is not an audit trail.
+-- Revisions and the audit log get read-only client policies below: an audit
+-- trail its subjects can write is not an audit trail.
+--
+-- That makes the writing trigger SECURITY DEFINER a requirement, not a
+-- refinement. `audit_blog_post_write()` was invoker-rights, so with no INSERT
+-- policy on these tables its inserts are refused by RLS — which fails the
+-- *entire* blog write that fired it. Every post insert and update would break.
+-- Redefined here with definer rights and a pinned search_path; the body is
+-- otherwise byte-identical to V002.
+create or replace function public.audit_blog_post_write()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+DECLARE
+  actor UUID := auth.uid();
+  actor_email TEXT := auth.jwt() ->> 'email';
+  snapshot JSONB;
+  post_id_value UUID;
+  status_value TEXT;
+  event_name TEXT;
+  metadata_value JSONB;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    snapshot := to_jsonb(OLD);
+    post_id_value := OLD.id;
+    status_value := OLD.status;
+    event_name := 'deleted';
+    metadata_value := jsonb_build_object('published', OLD.published);
+  ELSE
+    snapshot := to_jsonb(NEW);
+    post_id_value := NEW.id;
+    status_value := NEW.status;
+    event_name := CASE
+      WHEN TG_OP = 'INSERT' THEN 'created'
+      WHEN OLD.status IS DISTINCT FROM NEW.status THEN 'status_changed'
+      ELSE 'updated'
+    END;
+    metadata_value := CASE
+      WHEN TG_OP = 'INSERT' THEN jsonb_build_object(
+        'published', NEW.published,
+        'scheduled_for', NEW.scheduled_for
+      )
+      ELSE jsonb_build_object(
+        'published', NEW.published,
+        'scheduled_for', NEW.scheduled_for,
+        'previous_status', OLD.status,
+        'next_status', NEW.status
+      )
+    END;
+  END IF;
+
+  INSERT INTO public.blog_post_revisions (post_id, operation, actor_id, snapshot, status)
+  VALUES (post_id_value, LOWER(TG_OP), actor, snapshot, status_value);
+
+  INSERT INTO public.blog_post_audit_log (post_id, event_type, actor_id, actor_email, status, metadata)
+  VALUES (post_id_value, event_name, actor, actor_email, status_value, metadata_value);
+
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
 drop policy if exists "admin_all_blog_post_revisions" on public.blog_post_revisions;
+drop policy if exists blog_post_revisions_read on public.blog_post_revisions;
 create policy blog_post_revisions_read on public.blog_post_revisions
 for select to authenticated
 using (public.has_capability('blog.read'));
 
 drop policy if exists "admin_all_blog_post_audit_log" on public.blog_post_audit_log;
+drop policy if exists blog_post_audit_log_read on public.blog_post_audit_log;
 create policy blog_post_audit_log_read on public.blog_post_audit_log
 for select to authenticated
 using (public.has_capability('audit.read'));

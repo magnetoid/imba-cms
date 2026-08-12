@@ -1,22 +1,57 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["pnpm-lock.yaml", "tsconfig.base.json", "vitest.shared.ts", ".nvmrc"],
+  "globalDependencies": [
+    "pnpm-lock.yaml",
+    "tsconfig.base.json",
+    "vitest.shared.ts",
+    ".nvmrc"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["src/**", "tsconfig*.json", "package.json"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "src/**",
+        "tsconfig*.json",
+        "package.json"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "typecheck": {
-      "dependsOn": ["^build"],
-      "inputs": ["src/**", "tsconfig*.json"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "src/**",
+        "tsconfig*.json"
+      ]
     },
     "lint": {},
     "test": {
-      "dependsOn": ["^build"],
-      "inputs": ["src/**", "vitest.config.ts", "package.json"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "src/**",
+        "vitest.config.ts",
+        "package.json"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
-    "dev": { "cache": false, "persistent": true }
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:int": {
+      "dependsOn": [
+        "^build"
+      ],
+      "cache": false
+    }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "name": "@imba/db-testkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:int": "vitest run --config vitest.int.config.ts"
+  },
+  "devDependencies": {
+    "@imba/core": "workspace:*",
+    "@imba/plugin-blog": "workspace:*",
+    "@imba/plugin-media": "workspace:*",
+    "@imba/plugin-pages": "workspace:*",
+    "@imba/plugin-projects": "workspace:*",
+    "@imba/plugin-site": "workspace:*",
+    "@imba/tsconfig": "workspace:*",
+    "@types/node": "^25.9.1",
+    "@types/pg": "^8.15.6",
+    "pg": "^8.23.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}
