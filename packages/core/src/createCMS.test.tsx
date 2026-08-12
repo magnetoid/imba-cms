@@ -21,7 +21,7 @@ const template = defineTemplate({
 
 describe('createCMS', () => {
   it('renders a plugin route wrapped in the template Public layout', () => {
-    const cms = createCMS({ template, plugins: [blog], site, supabase: { anonKey: 'k' } })
+    const cms = createCMS({ template, plugins: [blog], site, supabase: { url: 'https://test.supabase.co', anonKey: 'k' } })
     render(
       <MemoryRouter initialEntries={['/blog']}>
         <cms.Router />
@@ -36,9 +36,9 @@ describe('createCMS', () => {
       template,
       plugins: [definePlugin({ name: 'blog', version: '1.0.0', migrations: [{ id: 'blog.V001', sql: '-- x' }] })],
       site,
-      supabase: { anonKey: 'k' },
+      supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
     })
-    expect(cms.migrations.map((m) => m.id)).toEqual(['core.V001', 'core.V002', 'blog.V001'])
+    expect(cms.migrations.map((m) => m.id)).toEqual(['core.V001', 'core.V002', 'core.V003', 'core.V004', 'core.V005', 'blog.V001'])
     expect(cms.migrations[0].sql).toMatch(/is_admin/i)
     expect(cms.migrations[1].sql).toMatch(/cms_private_settings/i)
   })
@@ -49,13 +49,13 @@ describe('createCMS', () => {
         template,
         plugins: [definePlugin({ name: 'dup', version: '1' }), definePlugin({ name: 'dup', version: '1' })],
         site,
-        supabase: { anonKey: 'k' },
+        supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
       }),
     ).toThrow(/duplicate plugin name: dup/i)
   })
 
   it('creates a dedicated public app router', () => {
-    const app = createPublicApp({ template, plugins: [blog], site, supabase: { anonKey: 'k' } })
+    const app = createPublicApp({ template, plugins: [blog], site, supabase: { url: 'https://test.supabase.co', anonKey: 'k' } })
     render(
       <MemoryRouter initialEntries={['/blog']}>
         <app.Router />
@@ -65,7 +65,12 @@ describe('createCMS', () => {
     expect(screen.getByText('BLOG PAGE')).toBeDefined()
   })
 
-  it('does not run plugin register hooks for the dedicated public app', () => {
+  it('runs plugin register hooks for the dedicated public app', () => {
+    // This previously asserted the opposite, which pinned a real defect:
+    // `createPublicApp` never created a db and never called `register`, so any
+    // plugin resolving its delivery client in that hook — plugin-blog does —
+    // threw "public client not initialized" on first render. The old test only
+    // checked route shape, so nothing caught it.
     let registerCalls = 0
     createPublicApp({
       template,
@@ -77,10 +82,10 @@ describe('createCMS', () => {
         },
       })],
       site,
-      supabase: { anonKey: 'k' },
+      supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
     })
 
-    expect(registerCalls).toBe(0)
+    expect(registerCalls).toBe(1)
   })
 
   it('creates a dedicated admin app router with the admin auth shell', async () => {
@@ -94,7 +99,7 @@ describe('createCMS', () => {
         },
       })],
       site,
-      supabase: { anonKey: 'k' },
+      supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
     })
     render(
       <MemoryRouter initialEntries={['/admin/settings']}>
@@ -112,7 +117,7 @@ describe('createCMS', () => {
     })
 
     expect(() =>
-      createPublicApp({ template: expectedTemplate, plugins: [], site, supabase: { anonKey: 'k' } }),
+      createPublicApp({ template: expectedTemplate, plugins: [], site, supabase: { url: 'https://test.supabase.co', anonKey: 'k' } }),
     ).toThrow(/expects plugin "blog"/i)
   })
 })

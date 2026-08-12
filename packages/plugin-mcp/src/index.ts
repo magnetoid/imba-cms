@@ -1,6 +1,7 @@
 export {
   readConfig,
   createServiceClient,
+  assertHttpAuthConfigured,
   DEFAULT_MCP_CAPABILITIES,
   type McpAuthMode,
   type McpConfig,

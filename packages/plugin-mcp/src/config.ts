@@ -25,6 +25,8 @@ export interface McpConfig {
   basicUsername?: string
   basicPassword?: string
   allowedCapabilities: readonly CmsCapability[]
+  /** Set by `IMBA_MCP_ALLOW_INSECURE=1`. Only consulted by the HTTP transport. */
+  allowInsecureHttp: boolean
 }
 
 function pickEnv(env: NodeJS.ProcessEnv, ...keys: string[]): string | undefined {
@@ -75,6 +77,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   const basicUsername = pickEnv(env, 'IMBA_MCP_BASIC_USERNAME')
   const basicPassword = pickEnv(env, 'IMBA_MCP_BASIC_PASSWORD')
   const allowedCapabilities = parseCapabilities(pickEnv(env, 'IMBA_MCP_ALLOWED_CAPABILITIES'))
+  const allowInsecureHttp = pickEnv(env, 'IMBA_MCP_ALLOW_INSECURE') === '1'
 
   const missing: string[] = []
   if (!supabaseUrl) missing.push('IMBA_SUPABASE_URL (or SUPABASE_URL)')
@@ -98,7 +101,31 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
     basicUsername,
     basicPassword,
     allowedCapabilities,
+    allowInsecureHttp,
   }
+}
+
+/**
+ * Guards the HTTP transport against being exposed unauthenticated.
+ *
+ * `authMode: 'none'` is the correct default for the **stdio** transport: the
+ * process is spawned by the local agent, speaks over a pipe, and opens no
+ * socket. It is not safe for `--http`, which binds a listener in front of a
+ * service-role key. So the requirement lives here, at the transport boundary,
+ * rather than in `readConfig` — gating it there would break every local
+ * `claude mcp add` install.
+ */
+export function assertHttpAuthConfigured(config: McpConfig): void {
+  if (config.authMode !== 'none') return
+  if (config.allowInsecureHttp) return
+
+  throw new Error(
+    '@imba/plugin-mcp: refusing to start an unauthenticated HTTP server. ' +
+      'This process holds the Supabase service-role key. Set IMBA_MCP_AUTH_MODE to ' +
+      '"bearer" or "basic" (with the matching token/credentials), or set ' +
+      'IMBA_MCP_ALLOW_INSECURE=1 if the listener is genuinely unreachable from ' +
+      'outside the host. The stdio transport is unaffected.',
+  )
 }
 
 /**

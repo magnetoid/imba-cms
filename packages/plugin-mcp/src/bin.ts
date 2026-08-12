@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 
-import { readConfig, createServiceClient } from './config.js'
+import { readConfig, createServiceClient, assertHttpAuthConfigured } from './config.js'
 import { buildMcpServer, SERVER_NAME, SERVER_VERSION } from './server.js'
 
 const DEFAULT_PORT = 8765
@@ -78,10 +78,12 @@ Usage:
 Environment (required unless --help):
   IMBA_SUPABASE_URL               (or SUPABASE_URL)
   IMBA_SUPABASE_SERVICE_ROLE_KEY  (or SUPABASE_SERVICE_ROLE_KEY)
-  IMBA_MCP_AUTH_MODE              optional: none | bearer | basic
+  IMBA_MCP_AUTH_MODE              none | bearer | basic. Defaults to none, which
+                                  is fine for stdio but REFUSED by --http
   IMBA_MCP_BEARER_TOKEN           required when auth mode is bearer
   IMBA_MCP_BASIC_USERNAME         required when auth mode is basic
   IMBA_MCP_BASIC_PASSWORD         required when auth mode is basic
+  IMBA_MCP_ALLOW_INSECURE         set to 1 to allow --http with auth mode none
   IMBA_MCP_ALLOWED_CAPABILITIES   optional comma-separated tool scope override
 
 The service-role key is used server-side only and is never exposed through any
@@ -105,6 +107,7 @@ async function startStdio(): Promise<void> {
 
 async function startHttp(port: number): Promise<void> {
   const config = readConfig()
+  assertHttpAuthConfigured(config)
   const db = createServiceClient(config)
   const server = buildMcpServer(db, { allowedCapabilities: config.allowedCapabilities })
 
