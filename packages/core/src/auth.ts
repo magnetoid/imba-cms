@@ -1,14 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { parseCmsRole } from './permissions'
 import type { AuthApi, CmsRole, CmsSession } from './types'
-
-const CMS_ROLES = new Set<CmsRole>([
-  'super_admin',
-  'content_admin',
-  'editor',
-  'author',
-  'reviewer',
-  'media_manager',
-])
 
 function toCmsSession(session: unknown, cmsRole?: CmsRole): CmsSession | null {
   if (!session || typeof session !== 'object') return null
@@ -18,10 +10,6 @@ function toCmsSession(session: unknown, cmsRole?: CmsRole): CmsSession | null {
   const out = maybeSession as CmsSession
   if (cmsRole) out.cms_role = cmsRole
   return out
-}
-
-function toCmsRole(value: unknown): CmsRole | undefined {
-  return typeof value === 'string' && CMS_ROLES.has(value as CmsRole) ? (value as CmsRole) : undefined
 }
 
 async function loadCmsRole(client: SupabaseClient, userId: string): Promise<CmsRole | undefined> {
@@ -34,7 +22,7 @@ async function loadCmsRole(client: SupabaseClient, userId: string): Promise<CmsR
       .eq('user_id', userId)
       .maybeSingle()
 
-    return toCmsRole(data?.role)
+    return parseCmsRole(data?.role)
   } catch {
     return undefined
   }

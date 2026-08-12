@@ -11,6 +11,8 @@ export {
   CMS_CAPABILITIES,
   ALL_CMS_CAPABILITIES,
   ROLE_CAPABILITIES,
+  CMS_ROLES,
+  parseCmsRole,
   resolveCapabilities,
   hasAdminAccess,
   hasCapability,
@@ -20,6 +22,7 @@ export { CmsSessionProvider, useCmsSession } from './session'
 export { ThemeProvider, ThemeSlot, mergeThemeConfig, useThemeConfig, useThemeSlot, useThemeSlots } from './theme'
 export { useDocumentSeo, type DocumentSeoOptions } from './seo'
 export { createCMS, createAdminApp, createPublicApp, type CMSInstance } from './createCMS'
+export { composeMigrations, CORE_MIGRATIONS } from './manifest'
 export { initI18n } from './i18n'
 export { planMigrations, applyMigrations } from './cli/migrate'
 export type { ApplyOptions } from './cli/migrate'

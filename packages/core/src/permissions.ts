@@ -84,6 +84,20 @@ export const ROLE_CAPABILITIES: Record<CmsRole, readonly CmsCapability[]> = Obje
   media_manager: Object.freeze([C.mediaRead, C.mediaWrite]),
 })
 
+/** The valid `cms_user_roles.role` values, derived from the table above. */
+export const CMS_ROLES = Object.freeze(Object.keys(ROLE_CAPABILITIES) as CmsRole[])
+
+/**
+ * Narrows an untrusted value (a DB column, a JWT claim) to a known role.
+ * Returns `undefined` rather than throwing: an unrecognised role must resolve
+ * to no capabilities, not to an error that a caller might swallow into a grant.
+ */
+export function parseCmsRole(value: unknown): CmsRole | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase() as CmsRole
+  return CMS_ROLES.includes(normalized) ? normalized : undefined
+}
+
 function normalize(value: string): CmsCapability {
   return value.trim().toLowerCase()
 }

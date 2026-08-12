@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   getGraphqlSettings,
-  requireSettingsAccess,
   testGraphqlSettingsConnection,
   updateGraphqlSettings,
   updateMcpSettings,
 } from './service'
+import { clearServerSubjectCache, requireSettingsAccess } from './auth'
 
 function makeDb(initial: Record<string, unknown> = {}) {
   const store = new Map(Object.entries(initial))
@@ -174,6 +174,7 @@ describe('settings server service', () => {
   })
 
   it('requires the settings capability for settings access', async () => {
+    clearServerSubjectCache()
     const { db } = makeDb()
     db.auth.getUser = vi.fn().mockResolvedValue({
       data: { user: { id: '1', app_metadata: { permissions: ['blog.read'] } } },

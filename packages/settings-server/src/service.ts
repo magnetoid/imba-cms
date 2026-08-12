@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CMS_CAPABILITIES, hasCapability, type CmsCapability } from '@imba/core'
 import {
   allowPrivateOutbound,
   assertOutboundUrlAllowed,
@@ -146,18 +145,9 @@ async function saveScopeValue<T>(db: SettingsDb, scope: string, value: T) {
   if (result.error) throw new Error(result.error.message)
 }
 
-export async function requireSettingsAccess(db: SettingsDb, accessToken: string) {
-  return requireCapabilityAccess(db, accessToken, CMS_CAPABILITIES.settingsManage)
-}
-
-export async function requireCapabilityAccess(db: SettingsDb, accessToken: string, capability: CmsCapability) {
-  const result = await db.auth.getUser(accessToken)
-  if (result.error || !result.data.user) throw new Error('Unauthorized')
-  if (!hasCapability(result.data.user as never, capability)) {
-    throw new Error('Forbidden')
-  }
-  return result.data.user
-}
+// Authorization moved to ./auth.ts. The implementation that lived here passed a
+// bare GoTrue User into `hasCapability`, which resolves to the empty capability
+// set — see the comment at the top of auth.ts.
 
 export async function getGraphqlSettings(db: SettingsDb) {
   const stored = await loadStoredValue(db, GRAPHQL_SCOPES, DEFAULT_GRAPHQL_SETTINGS)

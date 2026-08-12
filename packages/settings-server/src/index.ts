@@ -6,11 +6,21 @@ export {
   getMcpSettings,
   updateMcpSettings,
   testMcpSettingsConnection,
-  requireSettingsAccess,
-  requireCapabilityAccess,
   type GraphqlSettingsResponse,
   type McpSettingsResponse,
 } from './service'
+export {
+  requireSettingsAccess,
+  requireCapabilityAccess,
+  requireAnyCapability,
+  resolveServerSubject,
+  resolveServerCapabilities,
+  clearServerSubjectCache,
+  ForbiddenError,
+  UnauthorizedError,
+  type AuthDb,
+  type ServerSubject,
+} from './auth'
 export {
   createPreviewToken,
   getBlogPostBySlug,

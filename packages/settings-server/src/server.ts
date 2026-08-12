@@ -14,13 +14,24 @@ import {
 import {
   getGraphqlSettings,
   getMcpSettings,
-  requireCapabilityAccess,
-  requireSettingsAccess,
   testGraphqlSettingsConnection,
   testMcpSettingsConnection,
   updateGraphqlSettings,
   updateMcpSettings,
 } from './service'
+import {
+  ForbiddenError,
+  UnauthorizedError,
+  requireCapabilityAccess,
+  requireSettingsAccess,
+} from './auth'
+
+/** Maps an auth failure to its status code; anything else stays a 400/500. */
+function authStatus(error: unknown): number | null {
+  if (error instanceof UnauthorizedError) return 401
+  if (error instanceof ForbiddenError) return 403
+  return null
+}
 
 type SettingsDb = Parameters<typeof getGraphqlSettings>[0]
 
@@ -149,8 +160,7 @@ export function createSettingsHttpHandler(
         )
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        const status = message === 'Forbidden' ? 403 : message === 'Unauthorized' ? 401 : 400
-        sendJson(res, status, { error: message }, corsOrigin)
+        sendJson(res, authStatus(error) ?? 400, { error: message }, corsOrigin)
       }
       return
     }
@@ -164,8 +174,7 @@ export function createSettingsHttpHandler(
       await requireSettingsAccess(db, token)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unauthorized'
-      const status = message === 'Forbidden' ? 403 : 401
-      sendJson(res, status, { error: message }, corsOrigin)
+      sendJson(res, authStatus(error) ?? 500, { error: message }, corsOrigin)
       return
     }
 
