@@ -177,6 +177,29 @@ function collectItems(node: React.ReactNode): React.ReactElement<SelectItemProps
   return items
 }
 
+/**
+ * Pulls the placeholder off a descendant `<SelectValue placeholder="..." />`.
+ *
+ * It used to be dropped entirely, and that was not cosmetic. With no matching
+ * option for the current value (`category_id` starts as `''`), a native select
+ * displays its *first* option while React state stays empty — so the editor saw
+ * "Design" selected and saved null. Rendering an explicit empty option makes
+ * what is displayed match what will be submitted.
+ */
+function findPlaceholder(node: React.ReactNode): string | undefined {
+  let found: string | undefined
+  React.Children.forEach(node, (child) => {
+    if (found || !React.isValidElement(child)) return
+    if (child.type === SelectValue) {
+      found = (child.props as { placeholder?: string }).placeholder
+      return
+    }
+    const children = (child.props as { children?: React.ReactNode } | null)?.children
+    if (children) found = findPlaceholder(children)
+  })
+  return found
+}
+
 export function Select({
   value,
   onValueChange,
@@ -189,14 +212,21 @@ export function Select({
   children: React.ReactNode
 }) {
   const items = collectItems(children)
+  const placeholder = findPlaceholder(children)
+
+  // Render an explicit empty option whenever the current value matches no item,
+  // so the control never displays a selection the form state does not hold.
+  const needsPlaceholder = !items.some((item) => item.props.value === value)
+
   return (
     <SelectCtx.Provider value={{ value, onValueChange }}>
       <select
-        value={value}
+        value={value ?? ''}
         disabled={disabled}
         onChange={(e) => onValueChange?.(e.target.value)}
         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
+        {needsPlaceholder && <option value="">{placeholder ?? ''}</option>}
         {items.map((item) => (
           <option key={item.props.value} value={item.props.value}>
             {typeof item.props.children === 'string' ? item.props.children : item.props.value}

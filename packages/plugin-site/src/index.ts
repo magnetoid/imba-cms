@@ -40,7 +40,6 @@ export default definePlugin({
       group: 'Content',
       label: 'Site',
       path: '/admin/site',
-      icon: 'Globe',
       requiredCapabilities: [CMS_CAPABILITIES.siteRead],
     },
     pages: [

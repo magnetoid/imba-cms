@@ -17,7 +17,6 @@ export interface NavItem {
   group: string
   label: string
   path: string
-  icon?: string
   requiredCapabilities?: CapabilityRequirement
 }
 
@@ -198,7 +197,6 @@ export interface Plugin {
   i18n?: Record<Locale, Record<string, string>>
   dashboard?: WidgetDef[]
   seed?: (ctx: PluginContext) => Promise<void>
-  edgeFunctions?: string[]
   register?: (ctx: PluginContext) => void
 }
 

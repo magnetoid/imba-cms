@@ -48,7 +48,6 @@ export default definePlugin({
       group: 'Content',
       label: 'Pages',
       path: '/admin/pages',
-      icon: 'LayoutTemplate',
       requiredCapabilities: [CMS_CAPABILITIES.pagesRead],
     },
     pages: [

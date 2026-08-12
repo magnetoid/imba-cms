@@ -34,7 +34,6 @@ export default definePlugin({
       group: 'Content',
       label: 'Blog',
       path: '/admin/blog',
-      icon: 'FileText',
       requiredCapabilities: [CMS_CAPABILITIES.blogRead],
     },
     pages: [

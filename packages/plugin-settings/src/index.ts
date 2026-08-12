@@ -26,4 +26,3 @@ const settings = definePlugin({
 
 export default settings
 export * from './shared'
-export * from './service'

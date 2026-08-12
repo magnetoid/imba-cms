@@ -14,7 +14,6 @@ export default definePlugin({
       group: 'Content',
       label: 'Media',
       path: '/admin/media',
-      icon: 'Image',
       requiredCapabilities: [CMS_CAPABILITIES.mediaRead],
     },
     pages: [

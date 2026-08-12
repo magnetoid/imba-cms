@@ -53,7 +53,6 @@ export default definePlugin({
       group: 'Content',
       label: 'Projects',
       path: '/admin/projects',
-      icon: 'FolderKanban',
       requiredCapabilities: [CMS_CAPABILITIES.projectsRead],
     },
     pages: [
