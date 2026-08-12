@@ -1,10 +1,12 @@
+import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import V001_projects from './migrations/V001_projects.sql?raw'
-import ProjectEditor from './admin/ProjectEditor'
-import ProjectsAdmin from './admin/ProjectsAdmin'
 import { DEFAULT_PROJECT_RECORDS } from './defaults'
 import { createSupabaseProjectsPublicClient, setProjectsDb, setProjectsPublicClient } from './public/projectsClient'
+
+const ProjectEditor = lazy(async () => import('./admin/ProjectEditor'))
+const ProjectsAdmin = lazy(async () => import('./admin/ProjectsAdmin'))
 
 async function seedDefaultProjects(ctx: PluginContext) {
   const { data, error } = await ctx.db

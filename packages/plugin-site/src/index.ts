@@ -1,10 +1,12 @@
+import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
-import SiteAdmin from './admin/SiteAdmin'
 import { buildDefaultSiteSettingsRecord } from './defaults'
 import V001_site from './migrations/V001_site.sql?raw'
 import { createSupabaseSitePublicClient, setSiteDb, setSitePublicClient } from './public/siteClient'
 import { PRIMARY_SITE_SETTINGS_SLUG } from './types'
+
+const SiteAdmin = lazy(async () => import('./admin/SiteAdmin'))
 
 async function seedDefaultSiteSettings(ctx: PluginContext) {
   const { data, error } = await ctx.db

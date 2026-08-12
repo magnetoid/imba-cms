@@ -1,9 +1,11 @@
+import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import { configureSettingsClient } from './client'
-import SettingsHome from './admin/SettingsHome'
-import GraphQLSettingsPage from './admin/GraphQLSettingsPage'
-import McpSettingsPage from './admin/McpSettingsPage'
-import SettingsWidget from './admin/SettingsWidget'
+
+const SettingsHome = lazy(async () => import('./admin/SettingsHome'))
+const GraphQLSettingsPage = lazy(async () => import('./admin/GraphQLSettingsPage'))
+const McpSettingsPage = lazy(async () => import('./admin/McpSettingsPage'))
+const SettingsWidget = lazy(async () => import('./admin/SettingsWidget'))
 
 const settings = definePlugin({
   name: 'settings',

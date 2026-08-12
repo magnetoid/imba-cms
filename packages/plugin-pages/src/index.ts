@@ -1,11 +1,13 @@
+import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import V001_pages from './migrations/V001_pages.sql?raw'
-import PagesAdmin from './admin/PagesAdmin'
-import PageEditor from './admin/PageEditor'
 import { buildDefaultPageRecord } from './defaults'
 import { setPagesDb, setPagesPublicClient, createSupabasePagesPublicClient } from './public/pagesClient'
 import { CMS_PAGE_SLUGS } from './types'
+
+const PagesAdmin = lazy(async () => import('./admin/PagesAdmin'))
+const PageEditor = lazy(async () => import('./admin/PageEditor'))
 
 async function seedDefaultPages(ctx: PluginContext) {
   const { data, error } = await ctx.db

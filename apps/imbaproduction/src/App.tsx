@@ -1,11 +1,12 @@
 import { BrowserRouter } from 'react-router-dom'
 import { createCMS } from '@imba/core'
 import blog from '@imba/plugin-blog'
+import media from '@imba/plugin-media'
 import cinema from '@imba/template-cinema'
 
 const cms = createCMS({
   template: cinema,
-  plugins: [blog],
+  plugins: [blog, media],
   site: {
     name: 'Imba Production',
     domain: 'imbaproduction.com',

@@ -1,6 +1,7 @@
 import { BrowserRouter } from 'react-router-dom'
 import { createAdminApp, readBrowserRuntimeOptionalValue, readBrowserRuntimeValue } from '@imba/core'
 import blog from '@imba/plugin-blog'
+import media from '@imba/plugin-media'
 import pages from '@imba/plugin-pages'
 import projects from '@imba/plugin-projects'
 import site from '@imba/plugin-site'
@@ -12,7 +13,7 @@ const runtimeSiteUrl = readBrowserRuntimeOptionalValue('VITE_SITE_URL', import.m
 const resolvedSiteDomain = new URL(runtimeSiteUrl ?? (typeof window !== 'undefined' ? window.location.origin : 'https://mtiosavljevic.com')).host
 
 const cms = createAdminApp({
-  plugins: [blog, pages, projects, site, settings],
+  plugins: [blog, media, pages, projects, site, settings],
   site: {
     name: 'IMBA CMS',
     domain: resolvedSiteDomain,
