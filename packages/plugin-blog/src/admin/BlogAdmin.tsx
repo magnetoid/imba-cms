@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
+import { CMS_CAPABILITIES, describeWriteError, hasCapability, useCmsSession } from '@imba/core'
 import { blogDb } from '../public/blogClient'
 import type { BlogPost } from '../types'
 import {
@@ -103,11 +103,22 @@ export default function BlogAdmin() {
       toast.error('You do not have permission to publish blog posts.')
       return
     }
-    await blogDb().from('blog_posts').update({
-      published: !post.published,
-      published_at: !post.published ? new Date().toISOString() : null,
-      status: !post.published ? 'published' : 'draft',
-    }).eq('id', post.id)
+
+    // Goes through the RPC rather than updating the workflow columns directly.
+    // A reviewer holds blog.publish but not blog.write, so RLS refuses them a
+    // direct UPDATE — and the function is the single place that decides which
+    // capability a status transition needs. It also means this component no
+    // longer duplicates the published_at arithmetic the trigger already does.
+    const { error } = await blogDb().rpc('blog_set_post_status', {
+      p_post_id: post.id,
+      p_status: post.published ? 'draft' : 'published',
+    })
+
+    if (error) {
+      toast.error(describeWriteError(error, 'blog post', CMS_CAPABILITIES.blogPublish))
+      return
+    }
+
     load()
   }
 

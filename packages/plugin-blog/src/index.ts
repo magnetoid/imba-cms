@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin, readBrowserRuntimeOptionalValue } from '@imba/core'
 import V001_blog from './migrations/V001_blog.sql?raw'
 import V002_blog from './migrations/V002_blog.sql?raw'
+import V003_blog from './migrations/V003_blog_rbac.sql?raw'
 import { createHttpBlogPublicClient, createSupabaseBlogPublicClient, setBlogDb, setBlogPublicClient } from './public/blogClient'
 import { seed } from './seed'
 
@@ -46,6 +47,7 @@ export default definePlugin({
   migrations: [
     { id: 'blog.V001', sql: V001_blog },
     { id: 'blog.V002', sql: V002_blog },
+    { id: 'blog.V003', sql: V003_blog },
   ],
   i18n: { en: { title: 'Blog' } },
   seed,
