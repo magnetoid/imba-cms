@@ -66,22 +66,22 @@ ALTER TABLE public.blog_posts_tags  ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "public_read_blog_categories" ON public.blog_categories;
 CREATE POLICY "public_read_blog_categories" ON public.blog_categories FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS "admin_all_blog_categories" ON public.blog_categories;
-CREATE POLICY "admin_all_blog_categories" ON public.blog_categories TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "admin_all_blog_categories" ON public.blog_categories TO authenticated USING (public.has_role(ARRAY['super_admin', 'content_admin', 'editor'])) WITH CHECK (public.has_role(ARRAY['super_admin', 'content_admin', 'editor']));
 
 DROP POLICY IF EXISTS "public_read_blog_tags" ON public.blog_tags;
 CREATE POLICY "public_read_blog_tags" ON public.blog_tags FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS "admin_all_blog_tags" ON public.blog_tags;
-CREATE POLICY "admin_all_blog_tags" ON public.blog_tags TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "admin_all_blog_tags" ON public.blog_tags TO authenticated USING (public.has_role(ARRAY['super_admin', 'content_admin', 'editor'])) WITH CHECK (public.has_role(ARRAY['super_admin', 'content_admin', 'editor']));
 
 DROP POLICY IF EXISTS "public_read_blog_posts" ON public.blog_posts;
-CREATE POLICY "public_read_blog_posts" ON public.blog_posts FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "public_read_blog_posts" ON public.blog_posts FOR SELECT TO anon, authenticated USING (status = 'published' or public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']));
 DROP POLICY IF EXISTS "admin_all_blog_posts" ON public.blog_posts;
-CREATE POLICY "admin_all_blog_posts" ON public.blog_posts TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "admin_all_blog_posts" ON public.blog_posts TO authenticated USING (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer'])) WITH CHECK (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']));
 
 DROP POLICY IF EXISTS "public_read_blog_posts_tags" ON public.blog_posts_tags;
 CREATE POLICY "public_read_blog_posts_tags" ON public.blog_posts_tags FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS "admin_all_blog_posts_tags" ON public.blog_posts_tags;
-CREATE POLICY "admin_all_blog_posts_tags" ON public.blog_posts_tags TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "admin_all_blog_posts_tags" ON public.blog_posts_tags TO authenticated USING (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer'])) WITH CHECK (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']));
 
 GRANT SELECT ON public.blog_categories, public.blog_tags, public.blog_posts, public.blog_posts_tags TO anon;
 GRANT ALL ON public.blog_categories, public.blog_tags, public.blog_posts, public.blog_posts_tags TO authenticated, service_role;

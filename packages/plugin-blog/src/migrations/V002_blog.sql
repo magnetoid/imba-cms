@@ -68,15 +68,15 @@ DROP POLICY IF EXISTS "admin_all_blog_post_revisions" ON public.blog_post_revisi
 CREATE POLICY "admin_all_blog_post_revisions"
 ON public.blog_post_revisions
 TO authenticated
-USING (public.is_admin())
-WITH CHECK (public.is_admin());
+USING (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']))
+WITH CHECK (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']));
 
 DROP POLICY IF EXISTS "admin_all_blog_post_audit_log" ON public.blog_post_audit_log;
 CREATE POLICY "admin_all_blog_post_audit_log"
 ON public.blog_post_audit_log
 TO authenticated
-USING (public.is_admin())
-WITH CHECK (public.is_admin());
+USING (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']))
+WITH CHECK (public.has_role(ARRAY['super_admin', 'content_admin', 'editor', 'author', 'reviewer']));
 
 CREATE OR REPLACE FUNCTION public.normalize_blog_post_workflow()
 RETURNS trigger

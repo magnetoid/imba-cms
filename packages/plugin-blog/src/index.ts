@@ -1,16 +1,19 @@
-import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
+import { lazy } from 'react'
+import { CMS_CAPABILITIES, definePlugin, readBrowserRuntimeOptionalValue } from '@imba/core'
 import V001_blog from './migrations/V001_blog.sql?raw'
 import V002_blog from './migrations/V002_blog.sql?raw'
-import { createSupabaseBlogPublicClient, setBlogDb, setBlogPublicClient } from './public/blogClient'
-import Blog from './public/Blog'
-import BlogPost from './public/BlogPost'
-import BlogAdmin from './admin/BlogAdmin'
-import BlogCategoriesAdmin from './admin/BlogCategoriesAdmin'
-import BlogPostEdit from './admin/BlogPostEdit'
+import { createHttpBlogPublicClient, createSupabaseBlogPublicClient, setBlogDb, setBlogPublicClient } from './public/blogClient'
 import { seed } from './seed'
+
+const Blog = lazy(async () => import('./public/Blog'))
+const BlogPost = lazy(async () => import('./public/BlogPost'))
+const BlogAdmin = lazy(async () => import('./admin/BlogAdmin'))
+const BlogCategoriesAdmin = lazy(async () => import('./admin/BlogCategoriesAdmin'))
+const BlogPostEdit = lazy(async () => import('./admin/BlogPostEdit'))
 
 export {
   blogPublicClient,
+  createHttpBlogPublicClient,
   createSupabaseBlogPublicClient,
   setBlogPublicClient,
   type BlogPublicClient,
@@ -48,6 +51,14 @@ export default definePlugin({
   seed,
   register(ctx) {
     setBlogDb(ctx.db)
+    const contentApiUrl = readBrowserRuntimeOptionalValue('IMBA_CONTENT_API_URL')
+    const previewToken = readBrowserRuntimeOptionalValue('IMBA_CONTENT_PREVIEW_TOKEN')
+
+    if (contentApiUrl) {
+      setBlogPublicClient(createHttpBlogPublicClient({ baseUrl: contentApiUrl, previewToken }))
+      return
+    }
+
     setBlogPublicClient(createSupabaseBlogPublicClient(ctx.db))
   },
 })

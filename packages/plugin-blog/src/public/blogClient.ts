@@ -27,6 +27,40 @@ export function blogPublicClient(): BlogPublicClient {
   return _publicClient
 }
 
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw new Error(`blog delivery request failed with status ${response.status}`)
+  }
+
+  return response.json() as Promise<T>
+}
+
+export function createHttpBlogPublicClient(config: {
+  baseUrl: string
+  previewToken?: string
+  fetchImpl?: typeof fetch
+}): BlogPublicClient {
+  const fetchImpl = config.fetchImpl ?? fetch
+
+  return {
+    async listPublishedPosts() {
+      const response = await fetchImpl(`${config.baseUrl.replace(/\/$/, '')}/api/content/blog/posts`)
+      const payload = await readJson<{ items: BlogPost[] }>(response)
+      return payload.items
+    },
+    async getPublishedPostBySlug(slug: string) {
+      const url = new URL(`${config.baseUrl.replace(/\/$/, '')}/api/content/blog/posts/${encodeURIComponent(slug)}`)
+      if (config.previewToken) {
+        url.searchParams.set('previewToken', config.previewToken)
+      }
+      const response = await fetchImpl(url.toString())
+      if (response.status === 404) return null
+      const payload = await readJson<{ item: BlogPost | null }>(response)
+      return payload.item
+    },
+  }
+}
+
 export function createSupabaseBlogPublicClient(db: SupabaseClient): BlogPublicClient {
   return {
     async listPublishedPosts() {

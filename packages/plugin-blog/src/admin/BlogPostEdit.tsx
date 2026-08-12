@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
+import { CMS_CAPABILITIES, hasCapability, readBrowserRuntimeOptionalValue, useCmsSession } from '@imba/core'
+import { MediaPickerField } from '@imba/plugin-media'
 import { blogDb } from '../public/blogClient'
 import type { BlogCategory, BlogPostStatus } from '../types'
 import {
@@ -33,6 +34,42 @@ const EMPTY_FORM = {
 }
 
 type FormState = typeof EMPTY_FORM
+
+interface AuditEntry {
+  id: string
+  event_type: string
+  actor_email?: string
+  status?: string
+  created_at: string
+}
+
+interface RevisionSnapshot {
+  title?: string
+  slug?: string
+  excerpt?: string
+  body?: string
+  cover_image_url?: string
+  featured_image_url?: string
+  category?: string
+  category_id?: string | null
+  tags?: string[]
+  read_time_minutes?: number
+  published?: boolean
+  status?: BlogPostStatus
+  scheduled_for?: string | null
+  author_name?: string
+  seo_title?: string
+  seo_description?: string
+  og_image_url?: string
+}
+
+interface RevisionEntry {
+  id: string
+  operation: string
+  status?: string
+  created_at: string
+  snapshot: RevisionSnapshot
+}
 
 const BLOG_STATUS_OPTIONS: Array<{ value: BlogPostStatus; label: string }> = [
   { value: 'draft', label: 'Draft' },
@@ -175,7 +212,10 @@ export default function BlogPostEdit() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [previewLaunching, setPreviewLaunching] = useState(false)
   const [tagInput, setTagInput] = useState('')
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([])
+  const [revisions, setRevisions] = useState<RevisionEntry[]>([])
   const [originalTitle, setOriginalTitle] = useState('')
   const [showOutline, setShowOutline] = useState(true)
   const tagInputRef = useRef<HTMLInputElement>(null)
@@ -230,6 +270,22 @@ export default function BlogPostEdit() {
         })
         setLoading(false)
       })
+
+    blogDb()
+      .from('blog_post_audit_log')
+      .select('id, event_type, actor_email, status, created_at')
+      .eq('post_id', id!)
+      .order('created_at', { ascending: false })
+      .limit(8)
+      .then(({ data }) => setAuditEntries((data || []) as AuditEntry[]))
+
+      blogDb()
+        .from('blog_post_revisions')
+        .select('id, operation, status, created_at, snapshot')
+        .eq('post_id', id!)
+        .order('created_at', { ascending: false })
+        .limit(8)
+        .then(({ data }) => setRevisions((data || []) as RevisionEntry[]))
   }, [id, isEdit, location.state])
 
   // Warn on unload if dirty
@@ -316,6 +372,67 @@ export default function BlogPostEdit() {
   function cancel() {
     if (dirty && !confirm('You have unsaved changes. Discard them?')) return
     navigate('/admin/blog')
+  }
+
+  async function openPreview() {
+    if (!form.slug) return
+
+    const contentApiUrl = readBrowserRuntimeOptionalValue('IMBA_CONTENT_API_URL')
+    if (!contentApiUrl || !session?.access_token) {
+      window.open(`/blog/${form.slug}`, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    setPreviewLaunching(true)
+    try {
+      const response = await fetch(`${contentApiUrl.replace(/\/$/, '')}/api/content/blog/preview-token`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slug: form.slug }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Preview request failed with status ${response.status}`)
+      }
+
+      const payload = await response.json() as { token?: string }
+      const url = payload.token
+        ? `/blog/${form.slug}?previewToken=${encodeURIComponent(payload.token)}`
+        : `/blog/${form.slug}`
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : 'Preview is unavailable right now.')
+    } finally {
+      setPreviewLaunching(false)
+    }
+  }
+
+  function restoreRevision(entry: RevisionEntry) {
+    const snapshot = entry.snapshot
+    setForm((current) => ({
+      ...current,
+      title: snapshot.title ?? current.title,
+      slug: snapshot.slug ?? current.slug,
+      excerpt: snapshot.excerpt ?? '',
+      body: snapshot.body ?? '',
+      cover_image_url: snapshot.cover_image_url ?? '',
+      featured_image_url: snapshot.featured_image_url ?? '',
+      category: snapshot.category ?? '',
+      category_id: snapshot.category_id ?? '',
+      tags: Array.isArray(snapshot.tags) ? snapshot.tags : [],
+      read_time_minutes: snapshot.read_time_minutes ?? current.read_time_minutes,
+      published: snapshot.published ?? false,
+      status: snapshot.status ?? 'draft',
+      scheduled_for: toDateTimeLocalValue(snapshot.scheduled_for ?? undefined),
+      author_name: snapshot.author_name ?? '',
+      seo_title: snapshot.seo_title ?? '',
+      seo_description: snapshot.seo_description ?? '',
+      og_image_url: snapshot.og_image_url ?? '',
+    }))
+    setDirty(true)
   }
 
   // Outline / word count derived from current body
@@ -634,32 +751,18 @@ export default function BlogPostEdit() {
 
             {/* Imagery */}
             <Section title="Imagery">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="b-cover">Cover image URL</Label>
-                <Input
-                  id="b-cover"
-                  value={form.cover_image_url}
-                  onChange={e => update('cover_image_url', e.target.value.trim())}
-                  placeholder="https://…"
-                />
-                {form.cover_image_url && (
-                  <img
-                    src={form.cover_image_url}
-                    alt="cover preview"
-                    className="mt-2 rounded-md border border-border w-full aspect-video object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="b-featured-img">Featured image URL</Label>
-                <Input
-                  id="b-featured-img"
-                  value={form.featured_image_url}
-                  onChange={e => update('featured_image_url', e.target.value.trim())}
-                  placeholder="https://…"
-                />
-              </div>
+              <MediaPickerField
+                label="Cover image"
+                value={form.cover_image_url}
+                onChange={(nextValue) => update('cover_image_url', nextValue.trim())}
+                helperText="Used on blog cards and listing layouts."
+              />
+              <MediaPickerField
+                label="Featured image"
+                value={form.featured_image_url}
+                onChange={(nextValue) => update('featured_image_url', nextValue.trim())}
+                helperText="Primary hero image on the post detail page."
+              />
             </Section>
 
             {/* SEO */}
@@ -693,16 +796,76 @@ export default function BlogPostEdit() {
                   placeholder="120–160 characters that appear in Google results."
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="b-og-img">OG image URL</Label>
-                <Input
-                  id="b-og-img"
-                  value={form.og_image_url}
-                  onChange={e => update('og_image_url', e.target.value.trim())}
-                  placeholder="Image used when shared on social — 1200×630"
-                />
-              </div>
+              <MediaPickerField
+                label="OG image"
+                value={form.og_image_url}
+                onChange={(nextValue) => update('og_image_url', nextValue.trim())}
+                helperText="Social sharing image, ideally 1200×630."
+              />
             </Section>
+
+            {isEdit && (
+              <Section title="Activity">
+                {auditEntries.length === 0 ? (
+                  <p className="text-xs text-muted-foreground/60">
+                    No audit activity yet for this post.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {auditEntries.map((entry) => (
+                      <li key={entry.id} className="rounded-md border border-border bg-background/60 p-3">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="font-medium text-foreground">
+                            {entry.event_type.replace(/_/g, ' ')}
+                          </span>
+                          <span className="font-mono text-muted-foreground/60">
+                            {new Date(entry.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[0.72rem] text-muted-foreground">
+                          {entry.actor_email || 'Unknown actor'}
+                          {entry.status ? ` · ${entry.status}` : ''}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            )}
+
+            {isEdit && (
+              <Section title="Revisions">
+                {revisions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground/60">
+                    No saved revisions yet for this post.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {revisions.map((entry) => (
+                      <li key={entry.id} className="rounded-md border border-border bg-background/60 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-medium text-foreground">
+                              {entry.operation} {entry.status ? `· ${entry.status}` : ''}
+                            </div>
+                            <div className="mt-1 text-[0.72rem] text-muted-foreground">
+                              {new Date(entry.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => restoreRevision(entry)}
+                            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-accent"
+                          >
+                            Restore into editor
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            )}
 
             {/* AI prefill notice */}
             {Boolean((location.state as { prefill?: unknown } | null)?.prefill) && !isEdit && (
@@ -713,16 +876,16 @@ export default function BlogPostEdit() {
             )}
 
             {/* Preview link */}
-            {isEdit && form.slug && form.published && (
-              <a
-                href={`/blog/${form.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            {form.slug && (
+              <button
+                type="button"
+                onClick={() => void openPreview()}
+                disabled={previewLaunching}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
-                <Eye className="h-3.5 w-3.5" />
-                View on site
-              </a>
+                {previewLaunching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                {form.published ? 'Open preview / live page' : 'Open draft preview'}
+              </button>
             )}
 
             <Separator />

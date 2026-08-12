@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useParams, Navigate, Link } from 'react-router-dom'
-import { useDocumentSeo, useThemeConfig } from '@imba/core'
-import { blogPublicClient } from './blogClient'
+import { useParams, Navigate, Link, useLocation } from 'react-router-dom'
+import { readBrowserRuntimeOptionalValue, useDocumentSeo, useThemeConfig } from '@imba/core'
+import { blogPublicClient, createHttpBlogPublicClient } from './blogClient'
+import { sanitizePostHtml } from './sanitize'
 import type { BlogPost as BlogPostType } from '../types'
 import { marked } from 'marked'
 
@@ -25,26 +26,10 @@ const CAT_COLOR: Record<string, string> = {
   'eCommerce': '#FAFAFA',
 }
 
-function sanitizeHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  doc.querySelectorAll('script, style, iframe, object, embed').forEach((node) => node.remove())
-  doc.querySelectorAll('*').forEach((element) => {
-    Array.from(element.attributes).forEach((attribute) => {
-      const name = attribute.name.toLowerCase()
-      const value = attribute.value.trim()
-      if (name.startsWith('on')) {
-        element.removeAttribute(attribute.name)
-      }
-      if ((name === 'href' || name === 'src') && /^javascript:/i.test(value)) {
-        element.removeAttribute(attribute.name)
-      }
-    })
-  })
-  return doc.body.innerHTML
-}
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>()
+  const location = useLocation()
   const theme = useThemeConfig()
   const [post, setPost] = useState<BlogPostType | null | undefined>(undefined)
   const [bodyHtml, setBodyHtml] = useState('')
@@ -61,21 +46,27 @@ export default function BlogPost() {
 
   useEffect(() => {
     if (!slug) { setPost(null); return }
-    blogPublicClient()
+    const previewToken = new URLSearchParams(location.search).get('previewToken') ?? undefined
+    const contentApiUrl = readBrowserRuntimeOptionalValue('IMBA_CONTENT_API_URL')
+    const client = previewToken && contentApiUrl
+      ? createHttpBlogPublicClient({ baseUrl: contentApiUrl, previewToken })
+      : blogPublicClient()
+
+    client
       .getPublishedPostBySlug(slug)
       .then((data) => {
         setPost(data || null)
         if (data?.body) {
           const result = marked.parse(data.body)
           if (typeof result === 'string') {
-            setBodyHtml(sanitizeHtml(result))
+            setBodyHtml(sanitizePostHtml(result))
           } else {
-            result.then(html => setBodyHtml(sanitizeHtml(html)))
+            result.then(html => setBodyHtml(sanitizePostHtml(html)))
           }
         }
       })
       .catch(() => setPost(null))
-  }, [slug])
+  }, [location.search, slug])
 
   // Loading
   if (post === undefined) {
