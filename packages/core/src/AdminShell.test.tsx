@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AdminShell } from './AdminShell'
 import type { AuthApi, CmsSession, NavItem, RouteDef } from './types'
 import { CMS_CAPABILITIES } from './permissions'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 function makeAuth(session: CmsSession | null): AuthApi {
   return {
@@ -13,6 +14,10 @@ function makeAuth(session: CmsSession | null): AuthApi {
     signOut: vi.fn().mockResolvedValue(undefined),
   }
 }
+
+const mockDb = {
+  from: () => ({ insert: async () => ({ error: null }) })
+} as unknown as SupabaseClient
 
 function renderAdminShell({
   initialEntry,
@@ -30,7 +35,7 @@ function renderAdminShell({
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/admin/*" element={<AdminShell auth={auth} nav={nav} pages={pages} widgets={widgets} />} />
+        <Route path="/admin/*" element={<AdminShell auth={auth} db={mockDb} nav={nav} pages={pages} widgets={widgets} />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -122,6 +127,45 @@ describe('AdminShell', () => {
 
     expect(await screen.findByTestId('admin-permission-denied')).toBeDefined()
     expect(screen.getByText(/permission required/i)).toBeDefined()
+  })
+
+  it('hides system navigation from a cms_role that lacks it', async () => {
+    // Regression: before ROLE_CAPABILITIES existed, any cms_role short-circuited
+    // hasCapability to true, so an editor saw — and could open — Settings.
+    renderAdminShell({
+      initialEntry: '/admin/posts',
+      auth: makeAuth({
+        user: { id: 'u1', email: 'editor@example.com' },
+        cms_role: 'editor',
+      }),
+      nav: [
+        { group: 'Content', label: 'Posts', path: '/admin/posts', requiredCapabilities: [CMS_CAPABILITIES.blogRead] },
+        { group: 'System', label: 'Settings', path: '/admin/settings', requiredCapabilities: [CMS_CAPABILITIES.settingsManage] },
+      ],
+      pages: [
+        { path: '/admin/posts', element: () => <div>Posts page</div>, requiredCapabilities: [CMS_CAPABILITIES.blogRead] },
+      ],
+      widgets: [],
+    })
+
+    expect(await screen.findByTestId('admin-shell')).toBeDefined()
+    expect(screen.getByText('Posts')).toBeDefined()
+    expect(screen.queryByText('Settings')).toBeNull()
+  })
+
+  it('denies a direct route hit that the cms_role does not cover', async () => {
+    renderAdminShell({
+      initialEntry: '/admin/settings',
+      auth: makeAuth({ user: { id: 'u1', email: 'editor@example.com' }, cms_role: 'editor' }),
+      nav: [],
+      pages: [
+        { path: '/admin/settings', element: () => <div>Settings page</div>, requiredCapabilities: [CMS_CAPABILITIES.settingsManage] },
+      ],
+      widgets: [],
+    })
+
+    expect(await screen.findByTestId('admin-permission-denied')).toBeDefined()
+    expect(screen.queryByText('Settings page')).toBeNull()
   })
 
   it('renders a dashboard home with quick links', async () => {

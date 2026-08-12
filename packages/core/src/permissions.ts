@@ -1,4 +1,4 @@
-import type { CapabilityRequirement, CmsCapability, CmsSession, CmsUser } from './types.js'
+import type { CapabilityRequirement, CmsCapability, CmsRole, CmsSession, CmsUser } from './types.js'
 
 export const CMS_CAPABILITIES = {
   siteRead: 'site.read',
@@ -16,17 +16,88 @@ export const CMS_CAPABILITIES = {
   blogDelete: 'blog.delete',
   blogSeed: 'blog.seed',
   blogCategoriesManage: 'blog.categories.manage',
+  mediaRead: 'media.read',
+  mediaWrite: 'media.write',
   settingsManage: 'settings.manage',
   automationManage: 'automation.manage',
 } as const satisfies Record<string, CmsCapability>
 
-function permissionsFromUser(user: CmsUser | null | undefined): ReadonlySet<CmsCapability> {
+/** Every capability the CMS defines. */
+export const ALL_CMS_CAPABILITIES: readonly CmsCapability[] = Object.freeze(
+  Object.values(CMS_CAPABILITIES),
+)
+
+const C = CMS_CAPABILITIES
+
+/**
+ * What each role may do.
+ *
+ * This table is the authorization model. It previously did not exist: every one
+ * of the six roles was treated as a full administrator, so the capabilities
+ * below — and every `requiredCapabilities` declaration on a route, nav item or
+ * dashboard widget — had no effect at all.
+ *
+ * The client-side check is a UX affordance; the enforceable boundary is the
+ * matching RLS policy in Postgres. The two must be kept in agreement.
+ */
+export const ROLE_CAPABILITIES: Record<CmsRole, readonly CmsCapability[]> = Object.freeze({
+  /** Unrestricted, including system settings and automation. */
+  super_admin: ALL_CMS_CAPABILITIES,
+
+  /** Owns all content, but not system configuration. */
+  content_admin: Object.freeze([
+    C.siteRead, C.siteWrite, C.sitePublish,
+    C.pagesRead, C.pagesWrite, C.pagesPublish,
+    C.projectsRead, C.projectsWrite, C.projectsPublish,
+    C.blogRead, C.blogWrite, C.blogPublish, C.blogDelete, C.blogSeed, C.blogCategoriesManage,
+    C.mediaRead, C.mediaWrite,
+  ]),
+
+  /** Writes and publishes content; cannot delete, seed, or change site chrome. */
+  editor: Object.freeze([
+    C.siteRead,
+    C.pagesRead, C.pagesWrite, C.pagesPublish,
+    C.projectsRead, C.projectsWrite, C.projectsPublish,
+    C.blogRead, C.blogWrite, C.blogPublish, C.blogCategoriesManage,
+    C.mediaRead, C.mediaWrite,
+  ]),
+
+  /** Drafts content and submits it for review. Cannot publish. */
+  author: Object.freeze([
+    C.siteRead,
+    C.pagesRead,
+    C.projectsRead,
+    C.blogRead, C.blogWrite,
+    C.mediaRead, C.mediaWrite,
+  ]),
+
+  /** Approves and publishes what others wrote. Cannot author or delete. */
+  reviewer: Object.freeze([
+    C.siteRead,
+    C.pagesRead, C.pagesPublish,
+    C.projectsRead, C.projectsPublish,
+    C.blogRead, C.blogPublish,
+    C.mediaRead,
+  ]),
+
+  /** The asset library only. */
+  media_manager: Object.freeze([C.mediaRead, C.mediaWrite]),
+})
+
+function normalize(value: string): CmsCapability {
+  return value.trim().toLowerCase()
+}
+
+/**
+ * Explicit per-user grants from the JWT. These are unioned with the role's set,
+ * which is how service identities (the MCP server builds a synthetic subject
+ * carrying only `permissions`) and narrowly-scoped tokens work.
+ */
+function permissionsFromUser(user: CmsUser | null | undefined): CmsCapability[] {
   const permissions = user?.app_metadata?.permissions ?? []
-  return new Set(
-    permissions
-      .filter((value: string): value is CmsCapability => typeof value === 'string' && value.trim().length > 0)
-      .map((value: CmsCapability) => value.trim().toLowerCase()),
-  )
+  return permissions
+    .filter((value: string): value is CmsCapability => typeof value === 'string' && value.trim().length > 0)
+    .map(normalize)
 }
 
 function adminRoleFromUser(user: CmsUser | null | undefined): string | undefined {
@@ -37,17 +108,17 @@ function adminRoleFromUser(user: CmsUser | null | undefined): string | undefined
   return typeof metadataRole === 'string' ? metadataRole.trim().toLowerCase() : undefined
 }
 
-function isAdminUser(user: CmsUser | null | undefined): boolean {
+/**
+ * Infrastructure-level full-access markers, mirroring the SQL `is_admin()`
+ * function: a Supabase `service_role` key, an `admin` JWT role, or an explicit
+ * `app_metadata.is_admin` flag. Note this is deliberately NOT satisfied by any
+ * `cms_role` other than `super_admin` — that conflation is what collapsed the
+ * whole model.
+ */
+function hasFullAccessMarker(user: CmsUser | null | undefined): boolean {
   if (!user) return false
-
   const role = adminRoleFromUser(user)
-  return Boolean(
-    user.app_metadata?.is_admin
-    || role === 'admin'
-    || role === 'service_role'
-    || role === 'super_admin'
-    || role === 'content_admin',
-  )
+  return Boolean(user.app_metadata?.is_admin || role === 'admin' || role === 'service_role')
 }
 
 function resolveUser(subject: CmsSession | CmsUser | null | undefined): CmsUser | null {
@@ -55,22 +126,42 @@ function resolveUser(subject: CmsSession | CmsUser | null | undefined): CmsUser 
   return 'user' in subject ? subject.user : subject
 }
 
-export function hasAdminAccess(subject: CmsSession | CmsUser | null | undefined): boolean {
-  const user = resolveUser(subject)
-  if (!user) return false
+function resolveSession(subject: CmsSession | CmsUser | null | undefined): CmsSession | null {
+  if (!subject) return null
+  return 'user' in subject ? (subject as CmsSession) : null
+}
 
-  const permissions = permissionsFromUser(user)
-  return isAdminUser(user) || permissions.size > 0
+/**
+ * The full set of capabilities a subject holds: the union of its `cms_role`
+ * grants and any explicit `app_metadata.permissions`.
+ */
+export function resolveCapabilities(
+  subject: CmsSession | CmsUser | null | undefined,
+): ReadonlySet<CmsCapability> {
+  const user = resolveUser(subject)
+  if (!user) return new Set()
+
+  if (hasFullAccessMarker(user)) return new Set(ALL_CMS_CAPABILITIES)
+
+  const role = resolveSession(subject)?.cms_role
+  const fromRole = role ? (ROLE_CAPABILITIES[role] ?? []) : []
+
+  return new Set([...fromRole, ...permissionsFromUser(user)])
+}
+
+/**
+ * Whether the subject may enter the admin app at all. True when it holds at
+ * least one capability — not merely when it is signed in.
+ */
+export function hasAdminAccess(subject: CmsSession | CmsUser | null | undefined): boolean {
+  return resolveCapabilities(subject).size > 0
 }
 
 export function hasCapability(
   subject: CmsSession | CmsUser | null | undefined,
   capability: CmsCapability,
 ): boolean {
-  const user = resolveUser(subject)
-  if (!user) return false
-  if (isAdminUser(user)) return true
-  return permissionsFromUser(user).has(capability.trim().toLowerCase())
+  return resolveCapabilities(subject).has(normalize(capability))
 }
 
 export function hasCapabilities(
@@ -78,5 +169,7 @@ export function hasCapabilities(
   requirements?: CapabilityRequirement,
 ): boolean {
   if (!requirements || requirements.length === 0) return true
-  return requirements.every((requirement: CmsCapability) => hasCapability(subject, requirement))
+
+  const held = resolveCapabilities(subject)
+  return requirements.every((requirement: CmsCapability) => held.has(normalize(requirement)))
 }

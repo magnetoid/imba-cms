@@ -6,7 +6,16 @@ export { buildRegistry, type CMSRegistry } from './registry'
 export { createDb, resolveSupabaseUrl } from './db'
 export { createAuth } from './auth'
 export { readBrowserRuntimeOptionalValue, readBrowserRuntimeValue } from './browserRuntime'
-export { CMS_CAPABILITIES, hasAdminAccess, hasCapability, hasCapabilities } from './permissions'
+export { registerVitePreloadReload } from './preload'
+export {
+  CMS_CAPABILITIES,
+  ALL_CMS_CAPABILITIES,
+  ROLE_CAPABILITIES,
+  resolveCapabilities,
+  hasAdminAccess,
+  hasCapability,
+  hasCapabilities,
+} from './permissions'
 export { CmsSessionProvider, useCmsSession } from './session'
 export { ThemeProvider, ThemeSlot, mergeThemeConfig, useThemeConfig, useThemeSlot, useThemeSlots } from './theme'
 export { useDocumentSeo, type DocumentSeoOptions } from './seo'

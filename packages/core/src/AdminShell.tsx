@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, Routes, Route } from 'react-router-dom'
 import type { AuthApi, CmsSession, NavItem, RouteDef, WidgetDef } from './types'
 import { hasAdminAccess, hasCapabilities } from './permissions'
 import { CmsSessionProvider } from './session'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { FeedbackModal } from './FeedbackModal'
 
 function toAdminChildPath(path: string): string {
   return path.replace(/^\/admin\/?/, '')
@@ -10,11 +12,13 @@ function toAdminChildPath(path: string): string {
 
 export function AdminShell({
   auth,
+  db,
   nav,
   pages,
   widgets,
 }: {
   auth: AuthApi
+  db: SupabaseClient
   nav: NavItem[]
   pages: RouteDef[]
   widgets: WidgetDef[]
@@ -59,10 +63,17 @@ export function AdminShell({
             <Route
               key={page.path}
               path={toAdminChildPath(page.path)}
-              element={hasCapabilities(session, page.requiredCapabilities) ? <page.element /> : <PermissionDeniedState />}
+              element={hasCapabilities(session, page.requiredCapabilities)
+                ? (
+                    <Suspense fallback={<ModuleLoadingState />}>
+                      <page.element />
+                    </Suspense>
+                  )
+                : <PermissionDeniedState />}
             />
           ))}
         </Routes>
+        <FeedbackModal db={db} />
       </div>
     </CmsSessionProvider>
   )
@@ -92,11 +103,21 @@ function DashboardHome({ nav, widgets }: { nav: NavItem[]; widgets: WidgetDef[] 
         <div className="mt-8 grid gap-4 xl:grid-cols-2">
           {widgets.map((widget) => (
             <section key={widget.id} className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <widget.render />
+              <Suspense fallback={<ModuleLoadingState />}>
+                <widget.render />
+              </Suspense>
             </section>
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function ModuleLoadingState() {
+  return (
+    <div className="p-4 text-sm text-muted-foreground" data-testid="admin-module-loading-state">
+      Loading module…
     </div>
   )
 }

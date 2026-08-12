@@ -141,6 +141,8 @@ export interface CmsUserAppMetadata {
   permissions?: string[]
 }
 
+export type CmsRole = 'super_admin' | 'content_admin' | 'editor' | 'author' | 'reviewer' | 'media_manager'
+
 export interface CmsUser {
   id: string
   email?: string
@@ -153,6 +155,7 @@ export interface CmsSession {
   user: CmsUser
   access_token?: string
   expires_at?: number
+  cms_role?: CmsRole
 }
 
 export interface AuthApi {
