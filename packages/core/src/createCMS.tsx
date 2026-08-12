@@ -13,6 +13,7 @@ import coreV002 from './migrations/V002_core.sql?raw'
 import coreV003 from './migrations/V003_rbac.sql?raw'
 import coreV004 from './migrations/V004_feedback.sql?raw'
 import coreV005 from './migrations/V005_tighten_reads.sql?raw'
+import coreV006 from './migrations/V006_capabilities.sql?raw'
 
 // The kernel's own base migration: creates schema_migrations + is_admin() + the
 // site/cms settings tables that every plugin's RLS depends on. It must lead the
@@ -28,6 +29,7 @@ export const CORE_MIGRATIONS: MigrationDef[] = [
   { id: 'core.V003', sql: coreV003 },
   { id: 'core.V004', sql: coreV004 },
   { id: 'core.V005', sql: coreV005 },
+  { id: 'core.V006', sql: coreV006 },
 ]
 
 export interface CMSInstance {

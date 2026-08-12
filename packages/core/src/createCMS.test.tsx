@@ -38,7 +38,7 @@ describe('createCMS', () => {
       site,
       supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
     })
-    expect(cms.migrations.map((m) => m.id)).toEqual(['core.V001', 'core.V002', 'core.V003', 'core.V004', 'core.V005', 'blog.V001'])
+    expect(cms.migrations.map((m) => m.id)).toEqual(['core.V001', 'core.V002', 'core.V003', 'core.V004', 'core.V005', 'core.V006', 'blog.V001'])
     expect(cms.migrations[0].sql).toMatch(/is_admin/i)
     expect(cms.migrations[1].sql).toMatch(/cms_private_settings/i)
   })

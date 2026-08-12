@@ -12,6 +12,8 @@ export const CMS_CAPABILITIES = {
   projectsPublish: 'projects.publish',
   blogRead: 'blog.read',
   blogWrite: 'blog.write',
+  /** Edit posts owned by someone else. `blog.write` alone means "your own". */
+  blogWriteAny: 'blog.write.any',
   blogPublish: 'blog.publish',
   blogDelete: 'blog.delete',
   blogSeed: 'blog.seed',
@@ -20,6 +22,9 @@ export const CMS_CAPABILITIES = {
   mediaWrite: 'media.write',
   settingsManage: 'settings.manage',
   automationManage: 'automation.manage',
+  /** Invite users and assign roles. Deliberately super_admin only. */
+  usersManage: 'users.manage',
+  auditRead: 'audit.read',
 } as const satisfies Record<string, CmsCapability>
 
 /** Every capability the CMS defines. */
@@ -49,8 +54,10 @@ export const ROLE_CAPABILITIES: Record<CmsRole, readonly CmsCapability[]> = Obje
     C.siteRead, C.siteWrite, C.sitePublish,
     C.pagesRead, C.pagesWrite, C.pagesPublish,
     C.projectsRead, C.projectsWrite, C.projectsPublish,
-    C.blogRead, C.blogWrite, C.blogPublish, C.blogDelete, C.blogSeed, C.blogCategoriesManage,
+    C.blogRead, C.blogWrite, C.blogWriteAny, C.blogPublish, C.blogDelete, C.blogSeed,
+    C.blogCategoriesManage,
     C.mediaRead, C.mediaWrite,
+    C.auditRead,
   ]),
 
   /** Writes and publishes content; cannot delete, seed, or change site chrome. */
@@ -58,7 +65,7 @@ export const ROLE_CAPABILITIES: Record<CmsRole, readonly CmsCapability[]> = Obje
     C.siteRead,
     C.pagesRead, C.pagesWrite, C.pagesPublish,
     C.projectsRead, C.projectsWrite, C.projectsPublish,
-    C.blogRead, C.blogWrite, C.blogPublish, C.blogCategoriesManage,
+    C.blogRead, C.blogWrite, C.blogWriteAny, C.blogPublish, C.blogCategoriesManage,
     C.mediaRead, C.mediaWrite,
   ]),
 

@@ -24,6 +24,12 @@ export { useDocumentSeo, type DocumentSeoOptions } from './seo'
 export { createCMS, createAdminApp, createPublicApp, type CMSInstance } from './createCMS'
 export { composeMigrations, CORE_MIGRATIONS } from './manifest'
 export {
+  describeWriteError,
+  describeSilentDenial,
+  isPermissionDenied,
+  type WriteErrorLike,
+} from './writeErrors'
+export {
   graphqlSettingsSchema,
   mcpSettingsSchema,
   DEFAULT_GRAPHQL_SETTINGS,

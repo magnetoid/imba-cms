@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
+import { CMS_CAPABILITIES, describeSilentDenial, describeWriteError, hasCapability, useCmsSession } from '@imba/core'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@imba/ui'
 import { buildDefaultSiteSettingsRecord } from '../defaults'
 import { siteDb } from '../public/siteClient'
@@ -164,11 +164,19 @@ export default function SiteAdmin() {
 
       if (saveError) throw saveError
 
+      // An UPDATE whose RLS `USING` clause rejects the row is not an error:
+      // PostgREST reports success with zero rows affected. Without this check
+      // the UI would say "saved" for a write the database refused.
+      if (!data) {
+        setError(describeSilentDenial('site settings', 'site.write'))
+        return
+      }
+
       setStatus(nextStatus)
-      setUpdatedAt(data?.updated_at)
+      setUpdatedAt(data.updated_at)
       setNotice('Site settings saved.')
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save site settings')
+      setError(describeWriteError(saveError, 'site settings', 'site.write'))
     } finally {
       setSaving(false)
     }

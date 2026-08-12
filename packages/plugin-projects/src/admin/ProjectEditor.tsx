@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
+import { CMS_CAPABILITIES, describeWriteError, hasCapability, useCmsSession } from '@imba/core'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@imba/ui'
 import { buildEmptyProjectRecord, DEFAULT_PROJECT_RECORDS } from '../defaults'
 import { projectsDb } from '../public/projectsClient'
@@ -148,7 +148,7 @@ export default function ProjectEditor() {
       if (saveError) throw saveError
       navigate('/admin/projects')
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save project')
+      setError(describeWriteError(saveError, 'project', 'projects.write'))
     } finally {
       setSaving(false)
     }

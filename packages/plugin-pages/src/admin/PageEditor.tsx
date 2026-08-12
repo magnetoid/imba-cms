@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CMS_CAPABILITIES, hasCapability, useCmsSession } from '@imba/core'
+import { CMS_CAPABILITIES, describeWriteError, hasCapability, useCmsSession } from '@imba/core'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@imba/ui'
 import { buildDefaultPageRecord, CMS_PAGE_DEFINITIONS } from '../defaults'
 import { pagesDb } from '../public/pagesClient'
@@ -121,7 +121,7 @@ export default function PageEditor() {
       if (saveError) throw saveError
       navigate('/admin/pages')
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save page')
+      setError(describeWriteError(saveError, 'page', 'pages.write'))
     } finally {
       setSaving(false)
     }

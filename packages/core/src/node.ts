@@ -41,6 +41,13 @@ export {
   type ConnectionTestResult,
 } from './settingsContracts.js'
 
+export {
+  describeWriteError,
+  describeSilentDenial,
+  isPermissionDenied,
+  type WriteErrorLike,
+} from './writeErrors.js'
+
 export type {
   CapabilityRequirement,
   CmsCapability,

@@ -3,6 +3,7 @@ import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import { buildDefaultSiteSettingsRecord } from './defaults'
 import V001_site from './migrations/V001_site.sql?raw'
+import V002_site from './migrations/V002_site_rbac.sql?raw'
 import { createSupabaseSitePublicClient, setSiteDb, setSitePublicClient } from './public/siteClient'
 import { PRIMARY_SITE_SETTINGS_SLUG } from './types'
 
@@ -48,6 +49,7 @@ export default definePlugin({
   },
   migrations: [
     { id: 'site.V001', sql: V001_site },
+    { id: 'site.V002', sql: V002_site },
   ],
   seed: seedDefaultSiteSettings,
   register(ctx) {

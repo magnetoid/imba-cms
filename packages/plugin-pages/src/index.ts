@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import V001_pages from './migrations/V001_pages.sql?raw'
+import V002_pages from './migrations/V002_pages_rbac.sql?raw'
 import { buildDefaultPageRecord } from './defaults'
 import { setPagesDb, setPagesPublicClient, createSupabasePagesPublicClient } from './public/pagesClient'
 import { CMS_PAGE_SLUGS } from './types'
@@ -57,6 +58,7 @@ export default definePlugin({
   },
   migrations: [
     { id: 'pages.V001', sql: V001_pages },
+    { id: 'pages.V002', sql: V002_pages },
   ],
   seed: seedDefaultPages,
   register(ctx) {

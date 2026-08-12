@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import V001_projects from './migrations/V001_projects.sql?raw'
+import V002_projects from './migrations/V002_projects_rbac.sql?raw'
 import { DEFAULT_PROJECT_RECORDS } from './defaults'
 import { createSupabaseProjectsPublicClient, setProjectsDb, setProjectsPublicClient } from './public/projectsClient'
 
@@ -62,6 +63,7 @@ export default definePlugin({
   },
   migrations: [
     { id: 'projects.V001', sql: V001_projects },
+    { id: 'projects.V002', sql: V002_projects },
   ],
   seed: seedDefaultProjects,
   register(ctx) {

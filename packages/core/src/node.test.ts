@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 const SRC = dirname(fileURLToPath(import.meta.url))
 
 /** Files reachable from node.ts. Kept explicit so adding one is a decision. */
-const NODE_GRAPH = ['node.ts', 'permissions.ts', 'settingsContracts.ts', 'types.ts']
+const NODE_GRAPH = ['node.ts', 'permissions.ts', 'settingsContracts.ts', 'types.ts', 'writeErrors.ts']
 
 function read(file: string): string {
   return readFileSync(join(SRC, file), 'utf8')
