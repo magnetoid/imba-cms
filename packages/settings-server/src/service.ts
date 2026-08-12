@@ -1,5 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CMS_CAPABILITIES, hasCapability } from '@imba/core'
+import { CMS_CAPABILITIES, hasCapability, type CmsCapability } from '@imba/core'
+import {
+  allowPrivateOutbound,
+  assertOutboundUrlAllowed,
+  type OutboundGuardOptions,
+} from './outbound'
 import {
   type ConnectionTestResult,
   DEFAULT_GRAPHQL_SETTINGS,
@@ -41,11 +46,25 @@ function buildAuthHeaders(config: { authMode: GraphqlSettings['authMode'] | McpS
   return {} as Record<string, string>
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number, fetchImpl: typeof fetch) {
+/**
+ * Fetches an operator-supplied URL. The target is screened by
+ * `assertOutboundUrlAllowed` first — this process holds the service-role key and
+ * usually sits inside a private network, so an unscreened fetch here is an SSRF
+ * primitive (see `outbound.ts`).
+ */
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit,
+  timeoutMs: number,
+  fetchImpl: typeof fetch,
+  guard: OutboundGuardOptions,
+) {
+  const url = await assertOutboundUrlAllowed(input, guard)
+
   const controller = new AbortController()
   const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs)
   try {
-    return await fetchImpl(input, { ...init, signal: controller.signal })
+    return await fetchImpl(url, { ...init, signal: controller.signal })
   } finally {
     globalThis.clearTimeout(timeout)
   }
@@ -128,9 +147,13 @@ async function saveScopeValue<T>(db: SettingsDb, scope: string, value: T) {
 }
 
 export async function requireSettingsAccess(db: SettingsDb, accessToken: string) {
+  return requireCapabilityAccess(db, accessToken, CMS_CAPABILITIES.settingsManage)
+}
+
+export async function requireCapabilityAccess(db: SettingsDb, accessToken: string, capability: CmsCapability) {
   const result = await db.auth.getUser(accessToken)
   if (result.error || !result.data.user) throw new Error('Unauthorized')
-  if (!hasCapability(result.data.user as never, CMS_CAPABILITIES.settingsManage)) {
+  if (!hasCapability(result.data.user as never, capability)) {
     throw new Error('Forbidden')
   }
   return result.data.user
@@ -164,6 +187,7 @@ export async function testGraphqlSettingsConnection(
   db: SettingsDb,
   input: GraphqlSettings,
   fetchImpl: typeof fetch = fetch,
+  guard: OutboundGuardOptions = { allowPrivate: allowPrivateOutbound() },
 ): Promise<ConnectionTestResult> {
   const existing = graphqlSettingsSchema.parse(await loadStoredValue(db, GRAPHQL_SCOPES, DEFAULT_GRAPHQL_SETTINGS))
   const merged = mergeGraphqlSecrets(existing, input)
@@ -182,6 +206,7 @@ export async function testGraphqlSettingsConnection(
       },
       merged.timeoutMs,
       fetchImpl,
+      guard,
     )
     const payload = await readJsonSafely(response)
     if (!response.ok) {
@@ -204,6 +229,7 @@ export async function testMcpSettingsConnection(
   db: SettingsDb,
   input: McpSettings,
   fetchImpl: typeof fetch = fetch,
+  guard: OutboundGuardOptions = { allowPrivate: allowPrivateOutbound() },
 ): Promise<ConnectionTestResult> {
   const existing = mcpSettingsSchema.parse(await loadStoredValue(db, MCP_SCOPES, DEFAULT_MCP_SETTINGS))
   const merged = mergeMcpSecrets(existing, input)
@@ -231,6 +257,7 @@ export async function testMcpSettingsConnection(
       },
       merged.timeoutMs,
       fetchImpl,
+      guard,
     )
 
     if (response.status < 500) {

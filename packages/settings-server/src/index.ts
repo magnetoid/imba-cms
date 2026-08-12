@@ -7,7 +7,15 @@ export {
   updateMcpSettings,
   testMcpSettingsConnection,
   requireSettingsAccess,
+  requireCapabilityAccess,
   type GraphqlSettingsResponse,
   type McpSettingsResponse,
 } from './service'
+export {
+  createPreviewToken,
+  getBlogPostBySlug,
+  listPublishedBlogPosts,
+  previewTokenRequestSchema,
+  verifyPreviewToken,
+} from './content'
 export { createSettingsHttpHandler, startSettingsServer } from './server'

@@ -134,11 +134,43 @@ describe('settings server service', () => {
       username: '',
       password: '',
       timeoutMs: 5000,
-    }, fetchImpl)
+      // Stubbed resolver: the outbound SSRF guard screens the endpoint before
+      // fetching, and a unit test must not perform a real DNS lookup.
+    }, fetchImpl, { resolve: async () => ['93.184.216.34'] })
 
     expect(result.ok).toBe(true)
     expect(fetchImpl).toHaveBeenCalledTimes(1)
     expect(fetchImpl.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer secret' })
+  })
+
+  it('refuses a connection test aimed at an internal address', async () => {
+    const { db } = makeDb({
+      'settings.graphql': {
+        enabled: true,
+        endpointUrl: 'http://169.254.169.254/latest/meta-data/',
+        authMode: 'none',
+        token: '',
+        username: '',
+        password: '',
+        timeoutMs: 5000,
+      },
+    })
+    const fetchImpl = vi.fn()
+
+    const result = await testGraphqlSettingsConnection(db as never, {
+      enabled: true,
+      endpointUrl: 'http://169.254.169.254/latest/meta-data/',
+      authMode: 'none',
+      token: '',
+      username: '',
+      password: '',
+      timeoutMs: 5000,
+    }, fetchImpl)
+
+    expect(result.ok).toBe(false)
+    expect(result.message).toMatch(/private address/i)
+    // The request must never leave the process.
+    expect(fetchImpl).not.toHaveBeenCalled()
   })
 
   it('requires the settings capability for settings access', async () => {
