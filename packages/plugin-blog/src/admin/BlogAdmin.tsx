@@ -7,7 +7,7 @@ import {
   Button, Badge, Switch,
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from './ui'
-import { Plus, Pencil, Trash2, Loader2, FileText, Database } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, Database, History } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { SEED_POSTS } from '../seed-data'
 
@@ -31,6 +31,7 @@ export default function BlogAdmin() {
   const canPublish = hasCapability(session, CMS_CAPABILITIES.blogPublish)
   const canDelete = hasCapability(session, CMS_CAPABILITIES.blogDelete)
   const canSeed = hasCapability(session, CMS_CAPABILITIES.blogSeed)
+  const canAudit = hasCapability(session, CMS_CAPABILITIES.auditRead)
 
   async function load() {
     setLoading(true)
@@ -145,6 +146,12 @@ export default function BlogAdmin() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {canAudit && (
+            <Button variant="ghost" onClick={() => navigate('/admin/blog/audit')}>
+              <History className="h-4 w-4 mr-2" />
+              Activity
+            </Button>
+          )}
           {missingSeeds > 0 && (
             <Button variant="outline" onClick={seedFromDefaults} disabled={seeding || !canSeed}>
               {seeding ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Seeding…</> : <><Database className="h-4 w-4 mr-2" />Seed {missingSeeds} sample post{missingSeeds === 1 ? '' : 's'}</>}

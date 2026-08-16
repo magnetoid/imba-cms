@@ -11,6 +11,7 @@ const BlogPost = lazy(async () => import('./public/BlogPost'))
 const BlogAdmin = lazy(async () => import('./admin/BlogAdmin'))
 const BlogCategoriesAdmin = lazy(async () => import('./admin/BlogCategoriesAdmin'))
 const BlogPostEdit = lazy(async () => import('./admin/BlogPostEdit'))
+const BlogAuditLog = lazy(async () => import('./admin/BlogAuditLog'))
 
 export {
   blogPublicClient,
@@ -39,6 +40,7 @@ export default definePlugin({
     pages: [
       { path: '/admin/blog', element: BlogAdmin, requiredCapabilities: [CMS_CAPABILITIES.blogRead] },
       { path: '/admin/blog/categories', element: BlogCategoriesAdmin, requiredCapabilities: [CMS_CAPABILITIES.blogCategoriesManage] },
+      { path: '/admin/blog/audit', element: BlogAuditLog, requiredCapabilities: [CMS_CAPABILITIES.auditRead] },
       { path: '/admin/blog/new', element: BlogPostEdit, requiredCapabilities: [CMS_CAPABILITIES.blogWrite] },
       { path: '/admin/blog/edit/:id', element: BlogPostEdit, requiredCapabilities: [CMS_CAPABILITIES.blogWrite] },
     ],
