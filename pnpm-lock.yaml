@@ -99,6 +99,15 @@ importers:
       '@imba/plugin-media':
         specifier: workspace:*
         version: link:../../packages/plugin-media
+      '@imba/plugin-pages':
+        specifier: workspace:*
+        version: link:../../packages/plugin-pages
+      '@imba/plugin-projects':
+        specifier: workspace:*
+        version: link:../../packages/plugin-projects
+      '@imba/plugin-site':
+        specifier: workspace:*
+        version: link:../../packages/plugin-site
       '@imba/template-cinema':
         specifier: workspace:*
         version: link:../../packages/template-cinema
@@ -605,6 +614,12 @@ importers:
       '@imba/core':
         specifier: workspace:*
         version: link:../core
+      '@imba/plugin-pages':
+        specifier: workspace:*
+        version: link:../plugin-pages
+      '@imba/plugin-projects':
+        specifier: workspace:*
+        version: link:../plugin-projects
       '@imba/ui':
         specifier: workspace:*
         version: link:../ui

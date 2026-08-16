@@ -1,16 +1,16 @@
-// jsdom does not implement matchMedia, which framer-motion's useReducedMotion
-// (and our own reduced-motion guards) rely on. Polyfill a stable no-op so the
-// PublicLayout / Home render tests can mount components that use motion.
-if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
-  window.matchMedia = (query: string): MediaQueryList =>
-    ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
-    }) as unknown as MediaQueryList
+// framer-motion's `whileInView` observes elements with IntersectionObserver,
+// which jsdom does not implement. A no-op stand-in lets the pages render; the
+// reveal animation itself is not under test.
+class NoopIntersectionObserver {
+  readonly root = null
+  readonly rootMargin = ''
+  readonly thresholds: ReadonlyArray<number> = []
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords(): IntersectionObserverEntry[] { return [] }
+}
+
+if (typeof globalThis.IntersectionObserver === 'undefined') {
+  globalThis.IntersectionObserver = NoopIntersectionObserver as unknown as typeof IntersectionObserver
 }

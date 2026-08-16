@@ -4,9 +4,23 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run", "lint": "eslint src --ext ts,tsx" },
-  "dependencies": { "@imba/core": "workspace:*", "@imba/ui": "workspace:*", "framer-motion": "^11.0.0", "lucide-react": "^0.309.0" },
-  "peerDependencies": { "react": "^18.2.0", "react-router-dom": "^6.21.0" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src --ext ts,tsx"
+  },
+  "dependencies": {
+    "@imba/core": "workspace:*",
+    "@imba/plugin-pages": "workspace:*",
+    "@imba/plugin-projects": "workspace:*",
+    "@imba/ui": "workspace:*",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.309.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-router-dom": "^6.21.0"
+  },
   "devDependencies": {
     "@imba/tsconfig": "workspace:*",
     "@testing-library/react": "^16.0.0",

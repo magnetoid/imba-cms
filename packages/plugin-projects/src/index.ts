@@ -4,7 +4,7 @@ import type { PluginContext } from '@imba/core'
 import V001_projects from './migrations/V001_projects.sql?raw'
 import V002_projects from './migrations/V002_projects_rbac.sql?raw'
 import { DEFAULT_PROJECT_RECORDS } from './defaults'
-import { createSupabaseProjectsPublicClient, setProjectsDb, setProjectsPublicClient } from './public/projectsClient'
+import { createSupabaseProjectsPublicClient, projectsPublicClient, setProjectsDb, setProjectsPublicClient } from './public/projectsClient'
 
 const ProjectEditor = lazy(async () => import('./admin/ProjectEditor'))
 const ProjectsAdmin = lazy(async () => import('./admin/ProjectsAdmin'))
@@ -68,6 +68,30 @@ export default definePlugin({
   register(ctx) {
     setProjectsDb(ctx.db)
     setProjectsPublicClient(createSupabaseProjectsPublicClient(ctx.db))
+  },
+  /**
+   * Published projects become the home page's "selected work" grid — the
+   * `ThemeProject` shape in core exists for exactly this. Featured ones win;
+   * with none flagged, every published project is shown. Nothing published
+   * means the template keeps its own sample grid.
+   */
+  async resolveTheme() {
+    const published = await projectsPublicClient().listPublishedProjects()
+    if (published.length === 0) return undefined
+    const featured = published.filter((p) => p.featured)
+    const chosen = (featured.length > 0 ? featured : published)
+      .slice()
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+    return {
+      home: {
+        selectedWorkItems: chosen.map((project, i) => ({
+          index: String(i + 1).padStart(2, '0'),
+          title: project.name,
+          category: project.category,
+          href: `/work/${project.slug}`,
+        })),
+      },
+    }
   },
 })
 

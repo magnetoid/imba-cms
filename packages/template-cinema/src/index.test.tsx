@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import cinema from './index'
@@ -70,5 +70,77 @@ describe('@imba/template-cinema reads theme config', () => {
     expect(cinema.theme?.defaults?.navLinks?.map((l) => l.label)).toEqual(['Work', 'Services', 'Journal', 'About', 'Contact'])
     expect(cinema.theme?.defaults?.footer?.contactEmail).toBe('hello@imbaproduction.com')
     expect(cinema.theme?.defaults?.brand).toEqual({ name: 'Imba', accent: 'Production', homePath: '/' })
+  })
+})
+
+describe('@imba/template-cinema public pages', () => {
+  it('registers the routes its own navigation links to', () => {
+    const paths = (cinema.pages ?? []).map((p) => p.path)
+    expect(paths).toEqual(expect.arrayContaining(['/', '/work', '/work/:slug', '/about', '/services', '/contact']))
+    expect(cinema.expects).toEqual(expect.arrayContaining(['blog', 'pages', 'projects']))
+  })
+
+  it('renders the About page from the pages plugin content', async () => {
+    const { setPagesPublicClient, buildDefaultPageRecord } = await import('@imba/plugin-pages')
+    const about = buildDefaultPageRecord('about')
+    setPagesPublicClient({
+      getPage: vi.fn().mockResolvedValue({ ...about, status: 'published', content: { ...about.content, title: 'Managed About Title' } }),
+      listPages: vi.fn().mockResolvedValue([]),
+    })
+    const About = cinema.pages!.find((p) => p.path === '/about')!.element
+    render(<MemoryRouter><About /></MemoryRouter>)
+    expect(await screen.findByText('Managed About Title')).toBeDefined()
+    expect(screen.getByText(about.content.focusAreas[0]!)).toBeDefined()
+  })
+
+  it('renders the Work index from published projects and links each to its case study', async () => {
+    const { setProjectsPublicClient, DEFAULT_PROJECT_RECORDS } = await import('@imba/plugin-projects')
+    const project = { ...DEFAULT_PROJECT_RECORDS[0]!, name: 'Managed Project' }
+    setProjectsPublicClient({
+      listPublishedProjects: vi.fn().mockResolvedValue([project]),
+      getPublishedProjectBySlug: vi.fn().mockResolvedValue(project),
+    })
+    const Work = cinema.pages!.find((p) => p.path === '/work')!.element
+    render(<MemoryRouter><Work /></MemoryRouter>)
+    const link = await screen.findByRole('link', { name: /Managed Project/ })
+    expect(link.getAttribute('href')).toBe(`/work/${project.slug}`)
+  })
+
+  it('renders a project case study by slug', async () => {
+    const { setProjectsPublicClient, DEFAULT_PROJECT_RECORDS } = await import('@imba/plugin-projects')
+    const project = { ...DEFAULT_PROJECT_RECORDS[0]!, name: 'Case Study Name', tagline: 'Case study tagline' }
+    setProjectsPublicClient({
+      listPublishedProjects: vi.fn().mockResolvedValue([project]),
+      getPublishedProjectBySlug: vi.fn().mockResolvedValue(project),
+    })
+    const { Routes, Route } = await import('react-router-dom')
+    const Project = cinema.pages!.find((p) => p.path === '/work/:slug')!.element
+    render(
+      <MemoryRouter initialEntries={[`/work/${project.slug}`]}>
+        <Routes><Route path="/work/:slug" element={<Project />} /></Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('Case Study Name')).toBeDefined()
+    expect(screen.getByText('Case study tagline')).toBeDefined()
+    expect(screen.getByText(project.content.problem.title)).toBeDefined()
+  })
+
+  it('renders the home hero from theme config so the pages plugin can drive it', async () => {
+    const { ThemeProvider } = await import('@imba/core')
+    const Home = cinema.pages!.find((p) => p.path === '/')!.element
+    render(
+      <MemoryRouter>
+        <ThemeProvider
+          template={cinema}
+          site={{ name: 'Test', domain: 't.com', defaultLocale: 'en', locales: ['en'] }}
+          resolvers={[async () => ({ home: { hero: { title: 'Managed hero headline' } } })]}
+        >
+          <Home />
+        </ThemeProvider>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('Managed hero headline')).toBeDefined()
+    // Untouched sections keep the template defaults.
+    expect(screen.getByText('Selected work')).toBeDefined()
   })
 })

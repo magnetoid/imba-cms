@@ -4,7 +4,7 @@ import type { PluginContext } from '@imba/core'
 import V001_pages from './migrations/V001_pages.sql?raw'
 import V002_pages from './migrations/V002_pages_rbac.sql?raw'
 import { buildDefaultPageRecord } from './defaults'
-import { setPagesDb, setPagesPublicClient, createSupabasePagesPublicClient } from './public/pagesClient'
+import { setPagesDb, setPagesPublicClient, createSupabasePagesPublicClient, pagesPublicClient } from './public/pagesClient'
 import { CMS_PAGE_SLUGS } from './types'
 
 const PagesAdmin = lazy(async () => import('./admin/PagesAdmin'))
@@ -63,6 +63,18 @@ export default definePlugin({
   register(ctx) {
     setPagesDb(ctx.db)
     setPagesPublicClient(createSupabasePagesPublicClient(ctx.db))
+  },
+  /**
+   * The published `home` page drives the theme hero, so an editor can change
+   * the landing headline without touching template code. Only the hero maps
+   * generically; the rest of HomePageContent is template-specific and read by
+   * the templates that render it.
+   */
+  async resolveTheme() {
+    const home = await pagesPublicClient().getPage('home')
+    if (!home || home.status !== 'published') return undefined
+    const { eyebrow, title, subtitle, primaryAction, secondaryAction } = home.content
+    return { home: { hero: { eyebrow, title, lead: subtitle, primaryAction, secondaryAction } } }
   },
 })
 
