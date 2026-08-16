@@ -241,3 +241,25 @@ describe('users routes', () => {
     expect(db.auth.admin.inviteUserByEmail).toHaveBeenCalledWith('new@example.com', { redirectTo: 'https://cms.example/admin' })
   })
 })
+
+describe('delivery routes for pages, projects and site', () => {
+  it('serves published pages, projects and site settings without auth', async () => {
+    const { baseUrl } = await startTestServer()
+    for (const path of ['/api/content/pages', '/api/content/projects']) {
+      const response = await fetch(`${baseUrl}${path}`)
+      expect(response.status, path).toBe(200)
+      expect((await response.json()).items).toHaveLength(1)
+    }
+    for (const path of ['/api/content/pages/about', '/api/content/projects/hello-world', '/api/content/site']) {
+      const response = await fetch(`${baseUrl}${path}`)
+      expect(response.status, path).toBe(200)
+      expect((await response.json()).item).toBeTruthy()
+    }
+  })
+
+  it('rejects a malformed slug with 400', async () => {
+    const { baseUrl } = await startTestServer()
+    const response = await fetch(`${baseUrl}/api/content/pages/Not%20A%20Slug`)
+    expect(response.status).toBe(400)
+  })
+})

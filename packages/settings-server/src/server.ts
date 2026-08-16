@@ -13,6 +13,13 @@ import {
   createPreviewToken,
 } from './content.js'
 import {
+  getPublishedPage,
+  getPublishedProject,
+  getPublishedSiteSettings,
+  listPublishedPages,
+  listPublishedProjects,
+} from './delivery.js'
+import {
   getGraphqlSettings,
   getMcpSettings,
   testGraphqlSettingsConnection,
@@ -133,9 +140,37 @@ export function createSettingsHttpHandler(
         sendJson(res, 200, { item }, corsOrigin)
         return
       }
+
+      if (req.method === 'GET') {
+        if (pathname === '/api/content/pages') {
+          sendJson(res, 200, { items: await listPublishedPages(db) }, corsOrigin)
+          return
+        }
+        if (pathname === '/api/content/projects') {
+          sendJson(res, 200, { items: await listPublishedProjects(db) }, corsOrigin)
+          return
+        }
+        if (pathname === '/api/content/site') {
+          const item = await getPublishedSiteSettings(db)
+          sendJson(res, item ? 200 : 404, item ? { item } : { error: 'Not found' }, corsOrigin)
+          return
+        }
+        const pageMatch = pathname.match(/^\/api\/content\/pages\/([^/]+)$/)
+        if (pageMatch) {
+          const item = await getPublishedPage(db, decodeURIComponent(pageMatch[1] ?? ''))
+          sendJson(res, item ? 200 : 404, item ? { item } : { error: 'Not found' }, corsOrigin)
+          return
+        }
+        const projectMatch = pathname.match(/^\/api\/content\/projects\/([^/]+)$/)
+        if (projectMatch) {
+          const item = await getPublishedProject(db, decodeURIComponent(projectMatch[1] ?? ''))
+          sendJson(res, item ? 200 : 404, item ? { item } : { error: 'Not found' }, corsOrigin)
+          return
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Internal server error'
-      sendJson(res, /invalid|slug/i.test(message) ? 400 : 500, { error: message }, corsOrigin)
+      sendJson(res, error instanceof ZodError || /invalid|slug/i.test(message) ? 400 : 500, { error: message }, corsOrigin)
       return
     }
 
