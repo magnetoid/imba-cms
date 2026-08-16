@@ -16,6 +16,22 @@ import {
   deletePost,
   setPublished,
 } from './entities/blog.js'
+import {
+  contentStatusSchema,
+  createProject,
+  deleteProject,
+  getPage,
+  getProject,
+  getSiteSettings,
+  listPages,
+  listProjects,
+  setPageStatus,
+  setProjectStatus,
+  setSiteStatus,
+  updatePage,
+  updateProject,
+  updateSiteSettings,
+} from './entities/content.js'
 
 export const SERVER_NAME = 'imba-mcp'
 export const SERVER_VERSION = '0.1.0'
@@ -30,6 +46,19 @@ export const TOOL_NAMES = [
   'blog_delete_post',
   'blog_set_published',
   'blog_list_categories',
+  'pages_list',
+  'pages_get',
+  'pages_update',
+  'pages_set_status',
+  'projects_list',
+  'projects_get',
+  'projects_create',
+  'projects_update',
+  'projects_delete',
+  'projects_set_status',
+  'site_get_settings',
+  'site_update_settings',
+  'site_set_status',
 ] as const
 
 const RESOURCE_REQUIREMENTS = {
@@ -46,6 +75,21 @@ const TOOL_REQUIREMENTS = {
   blog_delete_post: [CMS_CAPABILITIES.blogDelete],
   blog_set_published: [CMS_CAPABILITIES.blogPublish],
   blog_list_categories: [CMS_CAPABILITIES.blogRead],
+  pages_list: [CMS_CAPABILITIES.pagesRead],
+  pages_get: [CMS_CAPABILITIES.pagesRead],
+  pages_update: [CMS_CAPABILITIES.pagesWrite],
+  pages_set_status: [CMS_CAPABILITIES.pagesPublish],
+  projects_list: [CMS_CAPABILITIES.projectsRead],
+  projects_get: [CMS_CAPABILITIES.projectsRead],
+  projects_create: [CMS_CAPABILITIES.projectsWrite],
+  projects_update: [CMS_CAPABILITIES.projectsWrite],
+  // No projects.delete capability exists; deletion rides on write, as the
+  // admin's RLS does.
+  projects_delete: [CMS_CAPABILITIES.projectsWrite],
+  projects_set_status: [CMS_CAPABILITIES.projectsPublish],
+  site_get_settings: [CMS_CAPABILITIES.siteRead],
+  site_update_settings: [CMS_CAPABILITIES.siteWrite],
+  site_set_status: [CMS_CAPABILITIES.sitePublish],
 } as const satisfies Record<(typeof TOOL_NAMES)[number], CapabilityRequirement>
 
 const json = (result: unknown) => ({
@@ -252,6 +296,183 @@ export function buildMcpServer(
         },
       },
       async ({ id, published }) => json(await setPublished(db, { id, published })),
+    )
+  }
+
+  // ── Pages ──────────────────────────────────────────────────────────────────
+  const jsonContent = z.record(z.unknown()).describe(
+    'Structured page content. Must match the shape the pages plugin defines for this slug (see @imba/plugin-pages types).',
+  )
+
+  if (canExpose(TOOL_REQUIREMENTS.pages_list)) {
+    server.registerTool(
+      'pages_list',
+      {
+        title: 'List site pages',
+        description: 'List the CMS-managed pages (home, about, services, contact) with status and content.',
+        inputSchema: { status: contentStatusSchema.optional().describe('Filter: draft | published') },
+      },
+      async (args) => json(await listPages(db, args)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.pages_get)) {
+    server.registerTool(
+      'pages_get',
+      {
+        title: 'Get a page by slug',
+        description: 'Fetch one page (home | about | services | contact). Returns null if not found.',
+        inputSchema: { slug: z.string().min(1).describe('The page slug') },
+      },
+      async ({ slug }) => json(await getPage(db, slug)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.pages_update)) {
+    server.registerTool(
+      'pages_update',
+      {
+        title: 'Update a page',
+        description: 'Change a page\'s title, SEO fields or structured content. Does not change publish status.',
+        inputSchema: {
+          slug: z.string().min(1),
+          patch: z.object({
+            title: z.string().min(1).optional(),
+            seo_title: z.string().nullable().optional(),
+            seo_description: z.string().nullable().optional(),
+            content: jsonContent.optional(),
+          }).describe('Fields to change'),
+        },
+      },
+      async ({ slug, patch }) => json(await updatePage(db, { slug, patch })),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.pages_set_status)) {
+    server.registerTool(
+      'pages_set_status',
+      {
+        title: 'Publish or unpublish a page',
+        description: 'Set a page to published (stamps published_at) or draft.',
+        inputSchema: { slug: z.string().min(1), status: contentStatusSchema },
+      },
+      async ({ slug, status }) => json(await setPageStatus(db, { slug, status })),
+    )
+  }
+
+  // ── Projects ───────────────────────────────────────────────────────────────
+  const projectFields = {
+    name: z.string().min(1),
+    slug: z.string().min(1).describe('Lowercase kebab-case unique slug'),
+    url: z.string().optional(),
+    year: z.string().optional(),
+    category: z.string().optional(),
+    tagline: z.string().optional(),
+    hero: z.string().optional().describe('Hero paragraph shown on the case study'),
+    summary: z.string().optional(),
+    accent: z.string().optional().describe('Accent colour, e.g. #10B981'),
+    featured: z.boolean().optional(),
+    sort_order: z.number().int().optional(),
+    status: contentStatusSchema.optional(),
+    seo_title: z.string().nullable().optional(),
+    seo_description: z.string().nullable().optional(),
+    content: z.record(z.unknown()).optional().describe('Case-study body; must match @imba/plugin-projects projectContentSchema'),
+  }
+
+  if (canExpose(TOOL_REQUIREMENTS.projects_list)) {
+    server.registerTool(
+      'projects_list',
+      {
+        title: 'List projects',
+        description: 'List portfolio projects in sort order. Filter by status and featured, cap with limit.',
+        inputSchema: {
+          status: contentStatusSchema.optional(),
+          featured: z.boolean().optional(),
+          limit: z.number().int().positive().max(200).optional(),
+        },
+      },
+      async (args) => json(await listProjects(db, args)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.projects_get)) {
+    server.registerTool(
+      'projects_get',
+      {
+        title: 'Get a project by slug',
+        description: 'Fetch one project case study by slug. Returns null if not found.',
+        inputSchema: { slug: z.string().min(1) },
+      },
+      async ({ slug }) => json(await getProject(db, slug)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.projects_create)) {
+    server.registerTool(
+      'projects_create',
+      { title: 'Create a project', description: 'Create a project. Requires name and slug; drafts by default.', inputSchema: projectFields },
+      async (input) => json(await createProject(db, input)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.projects_update)) {
+    server.registerTool(
+      'projects_update',
+      {
+        title: 'Update a project',
+        description: 'Update a project by id with a patch of the fields to change.',
+        inputSchema: { id: z.string().uuid(), patch: z.object(projectFields).partial().describe('Fields to change') },
+      },
+      async ({ id, patch }) => json(await updateProject(db, { id, patch })),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.projects_delete)) {
+    server.registerTool(
+      'projects_delete',
+      { title: 'Delete a project', description: 'Permanently delete a project by id.', inputSchema: { id: z.string().uuid() } },
+      async ({ id }) => json(await deleteProject(db, id)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.projects_set_status)) {
+    server.registerTool(
+      'projects_set_status',
+      {
+        title: 'Publish or unpublish a project',
+        description: 'Set a project to published (stamps published_at) or draft.',
+        inputSchema: { id: z.string().uuid(), status: contentStatusSchema },
+      },
+      async ({ id, status }) => json(await setProjectStatus(db, { id, status })),
+    )
+  }
+
+  // ── Site settings ──────────────────────────────────────────────────────────
+  if (canExpose(TOOL_REQUIREMENTS.site_get_settings)) {
+    server.registerTool(
+      'site_get_settings',
+      {
+        title: 'Get site settings',
+        description: 'The primary site settings row: brand, navigation, footer and its publish status.',
+        inputSchema: {},
+      },
+      async () => json(await getSiteSettings(db)),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.site_update_settings)) {
+    server.registerTool(
+      'site_update_settings',
+      {
+        title: 'Update site settings',
+        description: 'Change the site settings title or structured content (must match @imba/plugin-site siteSettingsContentSchema).',
+        inputSchema: {
+          patch: z.object({ title: z.string().min(1).optional(), content: z.record(z.unknown()).optional() }).describe('Fields to change'),
+        },
+      },
+      async ({ patch }) => json(await updateSiteSettings(db, { patch })),
+    )
+  }
+  if (canExpose(TOOL_REQUIREMENTS.site_set_status)) {
+    server.registerTool(
+      'site_set_status',
+      {
+        title: 'Publish or unpublish site settings',
+        description: 'Publish the site settings so the public site picks them up, or revert them to draft.',
+        inputSchema: { status: contentStatusSchema },
+      },
+      async ({ status }) => json(await setSiteStatus(db, { status })),
     )
   }
 

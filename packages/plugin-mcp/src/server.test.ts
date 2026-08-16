@@ -58,3 +58,27 @@ describe('buildMcpServer', () => {
     expect(Object.keys(registered)).not.toContain('blog_create_post')
   })
 })
+
+describe('buildMcpServer content tools', () => {
+  const names = (server: ReturnType<typeof buildMcpServer>) =>
+    Object.keys((server as unknown as { _registeredTools: Record<string, unknown> })._registeredTools).sort()
+
+  it('exposes pages, projects and site tools by default alongside blog', () => {
+    const registered = names(buildMcpServer(stubDb))
+    expect(registered).toEqual(expect.arrayContaining([
+      'pages_list', 'pages_get', 'pages_update', 'pages_set_status',
+      'projects_list', 'projects_get', 'projects_create', 'projects_update', 'projects_delete', 'projects_set_status',
+      'site_get_settings', 'site_update_settings', 'site_set_status',
+    ]))
+  })
+
+  it('gates each family on its own capabilities', () => {
+    const readOnly = names(buildMcpServer(stubDb, {
+      allowedCapabilities: [CMS_CAPABILITIES.pagesRead, CMS_CAPABILITIES.projectsRead, CMS_CAPABILITIES.siteRead],
+    }))
+    expect(readOnly).toEqual(['pages_get', 'pages_list', 'projects_get', 'projects_list', 'site_get_settings'])
+
+    const publisher = names(buildMcpServer(stubDb, { allowedCapabilities: [CMS_CAPABILITIES.pagesPublish] }))
+    expect(publisher).toEqual(['pages_set_status'])
+  })
+})

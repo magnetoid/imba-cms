@@ -5,11 +5,25 @@ import type { CmsCapability } from '@imba/core/node'
 const MCP_AUTH_MODES = ['none', 'bearer', 'basic'] as const
 export type McpAuthMode = typeof MCP_AUTH_MODES[number]
 
+/**
+ * What the server may do when `IMBA_MCP_ALLOWED_CAPABILITIES` is unset: full
+ * editorial control of every content plugin, no system capabilities
+ * (settings, users, automation). Narrow it with the env var.
+ */
 export const DEFAULT_MCP_CAPABILITIES = [
   CMS_CAPABILITIES.blogRead,
   CMS_CAPABILITIES.blogWrite,
   CMS_CAPABILITIES.blogPublish,
   CMS_CAPABILITIES.blogDelete,
+  CMS_CAPABILITIES.pagesRead,
+  CMS_CAPABILITIES.pagesWrite,
+  CMS_CAPABILITIES.pagesPublish,
+  CMS_CAPABILITIES.projectsRead,
+  CMS_CAPABILITIES.projectsWrite,
+  CMS_CAPABILITIES.projectsPublish,
+  CMS_CAPABILITIES.siteRead,
+  CMS_CAPABILITIES.siteWrite,
+  CMS_CAPABILITIES.sitePublish,
 ] as const satisfies readonly CmsCapability[]
 
 /**
