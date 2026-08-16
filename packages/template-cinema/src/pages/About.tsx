@@ -1,10 +1,11 @@
 import { getCmsPageOrDefault } from '@imba/plugin-pages'
 import { useAsyncContent } from '../useAsyncContent'
-import { ActionLink, LoadingState, PageHeader, Reveal, SectionHeading } from './shared'
+import { ActionLink, LoadingState, usePageSeo, PageHeader, Reveal, SectionHeading } from './shared'
 
 /** `/about` — the pages plugin's `about` entry. */
 export function About() {
   const { data: page, loading } = useAsyncContent(() => getCmsPageOrDefault('about'), 'page:about')
+  usePageSeo(page ? { title: page.seoTitle || page.title, description: page.seoDescription } : null)
   if (loading || !page) return <LoadingState />
   const c = page.content
 

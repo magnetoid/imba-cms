@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import cinema from './index'
 
@@ -142,5 +142,21 @@ describe('@imba/template-cinema public pages', () => {
     expect(await screen.findByText('Managed hero headline')).toBeDefined()
     // Untouched sections keep the template defaults.
     expect(screen.getByText('Selected work')).toBeDefined()
+  })
+})
+
+describe('@imba/template-cinema page SEO', () => {
+  it('writes the CMS record’s SEO fields into the document once loaded', async () => {
+    const { setPagesPublicClient, buildDefaultPageRecord } = await import('@imba/plugin-pages')
+    const about = buildDefaultPageRecord('about')
+    setPagesPublicClient({
+      getPage: vi.fn().mockResolvedValue({ ...about, status: 'published', seoTitle: 'Managed SEO Title', seoDescription: 'Managed SEO description' }),
+      listPages: vi.fn().mockResolvedValue([]),
+    })
+    const About = cinema.pages!.find((p) => p.path === '/about')!.element
+    render(<MemoryRouter><About /></MemoryRouter>)
+    await screen.findByText(about.content.title)
+    await waitFor(() => expect(document.title).toContain('Managed SEO Title'))
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Managed SEO description')
   })
 })

@@ -1,12 +1,13 @@
 import { Link, useParams } from 'react-router-dom'
 import { getProjectOrDefault } from '@imba/plugin-projects'
 import { useAsyncContent } from '../useAsyncContent'
-import { LoadingState, NotFoundState, NumberedGrid, Reveal, SectionHeading, pad } from './shared'
+import { LoadingState, NotFoundState, NumberedGrid, Reveal, SectionHeading, pad, usePageSeo } from './shared'
 
 /** `/work/:slug` — one project case study from the projects plugin. */
 export function Project() {
   const { slug = '' } = useParams<{ slug: string }>()
   const { data: project, loading } = useAsyncContent(() => getProjectOrDefault(slug), `project:${slug}`)
+  usePageSeo(project ? { title: project.seoTitle || project.name, description: project.seoDescription || project.tagline, type: 'article' } : null)
 
   if (loading) return <LoadingState />
   if (!project) return <NotFoundState title="That project isn’t here." backTo="/work" backLabel="← All work" />

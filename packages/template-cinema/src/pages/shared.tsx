@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
+import { useDocumentSeo, useThemeConfig } from '@imba/core'
 
 /** Section reveal wrapper — fades/translates in, once, with reduced-motion guard. */
 export function Reveal({
@@ -123,4 +124,20 @@ export function NumberedGrid<T>({
 
 export function pad(i: number): string {
   return String(i + 1).padStart(2, '0')
+}
+
+/**
+ * Applies a CMS record's SEO fields to the document. The route-level
+ * `PublicRouteElement` sets a static title on mount; this runs again once the
+ * record loads (its deps change), so the editor-managed values win.
+ */
+export function usePageSeo(seo: { title?: string; description?: string; type?: 'website' | 'article' } | null) {
+  const theme = useThemeConfig()
+  useDocumentSeo({
+    title: seo?.title,
+    description: seo?.description,
+    type: seo?.type,
+    siteName: theme.brand?.name,
+    siteUrl: theme.siteUrl,
+  })
 }
