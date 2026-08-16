@@ -28,7 +28,7 @@ built so more entities can be added later, but only blog ships today.
 | Bearer token       | `IMBA_MCP_BEARER_TOKEN`           | -                              |
 | Basic username     | `IMBA_MCP_BASIC_USERNAME`         | -                              |
 | Basic password     | `IMBA_MCP_BASIC_PASSWORD`         | -                              |
-| Tool capabilities  | `IMBA_MCP_ALLOWED_CAPABILITIES`   | built-in full blog allowlist   |
+| Tool capabilities  | `IMBA_MCP_ALLOWED_CAPABILITIES`   | full editorial allowlist (below) |
 
 Both are required to start the server (but **not** for `--help`).
 
@@ -38,11 +38,13 @@ Both are required to start the server (but **not** for `--help`).
 - `basic`: require HTTP Basic auth
 
 `IMBA_MCP_ALLOWED_CAPABILITIES` is a comma-separated allowlist controlling
-which MCP tools/resources are exposed at startup. Current blog capability keys:
-- `blog.read`
-- `blog.write`
-- `blog.publish`
-- `blog.delete`
+which MCP tools/resources are exposed at startup. Capability keys the server
+understands (all granted by default; system capabilities such as
+`settings.manage` and `users.manage` are never used by this server):
+- `blog.read`, `blog.write`, `blog.publish`, `blog.delete`
+- `pages.read`, `pages.write`, `pages.publish`
+- `projects.read`, `projects.write`, `projects.publish`
+- `site.read`, `site.write`, `site.publish`
 
 ## Running
 
@@ -125,6 +127,23 @@ auth header if `IMBA_MCP_AUTH_MODE` is `bearer` or `basic`.
 | `blog_delete_post`     | Permanently delete a post by `id`.                               |
 | `blog_set_published`   | Publish/unpublish by `id` (stamps/clears `published_at`).        |
 | `blog_list_categories` | List all blog categories.                                        |
+| `pages_list`           | List the CMS pages (home/about/services/contact); optional `status`. |
+| `pages_get`            | Get one page by `slug`.                                          |
+| `pages_update`         | Patch a page's `title`, SEO fields or structured `content`.      |
+| `pages_set_status`     | Publish/unpublish a page by `slug`.                              |
+| `projects_list`        | List projects in sort order; `status`, `featured`, `limit` filters. |
+| `projects_get`         | Get one project by `slug`.                                       |
+| `projects_create`      | Create a project; requires `name` + `slug`, drafts by default.   |
+| `projects_update`      | Patch a project by `id`.                                         |
+| `projects_delete`      | Permanently delete a project by `id`.                            |
+| `projects_set_status`  | Publish/unpublish a project by `id`.                             |
+| `site_get_settings`    | The primary site settings row (brand, nav, footer).              |
+| `site_update_settings` | Patch the site settings `title` / `content`.                     |
+| `site_set_status`      | Publish/unpublish the site settings.                             |
+
+`content` fields are JSON objects validated by the owning browser plugin's zod
+schema (`@imba/plugin-pages`, `@imba/plugin-projects`, `@imba/plugin-site`);
+this server passes them through, so send the same shape the admin editor saves.
 
 ## Exposed resources
 
@@ -139,6 +158,7 @@ auth header if `IMBA_MCP_AUTH_MODE` is `bearer` or `basic`.
 | ------------------------ | ---------------------------------------------------------------------- |
 | `src/config.ts`          | `readConfig()` (env) + `createServiceClient()` (service-role client).  |
 | `src/entities/blog.ts`   | Pure blog logic + zod schemas. No MCP-SDK imports — unit-tested.       |
+| `src/entities/content.ts`| Pages, projects and site settings logic + zod schemas.                 |
 | `src/server.ts`          | `buildMcpServer(db)` — registers the allowlist tools + resources.      |
 | `src/bin.ts`             | CLI entry: arg parsing, transport selection (stdio / HTTP).            |
 | `src/index.ts`           | Public re-exports.                                                     |
