@@ -13,6 +13,15 @@ The settings server now exposes public, read-only blog delivery endpoints:
 
 These endpoints return published content only unless a valid preview token is provided.
 
+Published-only delivery for the other content plugins (no preview path):
+
+- `GET /api/content/pages`, `GET /api/content/pages/:slug`
+- `GET /api/content/projects`, `GET /api/content/projects/:slug`
+- `GET /api/content/site`
+
+The pages, projects and site plugins switch to these when `IMBA_CONTENT_API_URL`
+is set, exactly as the blog plugin does.
+
 ### Draft preview tokens
 
 Authorized CMS users can request a short-lived preview token:
@@ -80,7 +89,6 @@ This does not replace route-level or end-to-end performance testing, but it conf
 
 ## Known next steps
 
-- add formal revision diff and rollback UI
-- move media inputs from raw URL fields to managed assets
-- expand the delivery API beyond blog content
+- add formal revision diff UI (restore exists in the blog editor)
+- preview tokens for pages/projects (delivery is published-only today)
 - add browser e2e coverage for preview flows
