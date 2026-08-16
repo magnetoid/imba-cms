@@ -1,10 +1,10 @@
 import { lazy } from 'react'
 import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
 import type { PluginContext } from '@imba/core'
-import { buildDefaultSiteSettingsRecord } from './defaults'
+import { buildDefaultSiteSettingsRecord, buildSiteThemeConfig } from './defaults'
 import V001_site from './migrations/V001_site.sql?raw'
 import V002_site from './migrations/V002_site_rbac.sql?raw'
-import { createSupabaseSitePublicClient, setSiteDb, setSitePublicClient } from './public/siteClient'
+import { createSupabaseSitePublicClient, setSiteDb, setSitePublicClient, sitePublicClient } from './public/siteClient'
 import { PRIMARY_SITE_SETTINGS_SLUG } from './types'
 
 const SiteAdmin = lazy(async () => import('./admin/SiteAdmin'))
@@ -54,6 +54,16 @@ export default definePlugin({
   register(ctx) {
     setSiteDb(ctx.db)
     setSitePublicClient(createSupabaseSitePublicClient(ctx.db))
+  },
+  /**
+   * The published settings row is the editor-controlled source for brand, nav
+   * and footer. Returning `undefined` when nothing is published keeps the
+   * template's own defaults, rather than pushing this plugin's sample content
+   * onto a site that never adopted it.
+   */
+  async resolveTheme() {
+    const settings = await sitePublicClient().getPublishedSiteSettings()
+    return settings ? buildSiteThemeConfig(settings.content) : undefined
   },
 })
 

@@ -1,27 +1,49 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { useThemeConfig } from '@imba/core'
+import type { ThemeAction, ThemeLink } from '@imba/core'
+import { CINEMA_THEME_DEFAULTS } from './themeDefaults'
 
-const LINKS = [
-  { to: '/work', label: 'Work' },
-  { to: '/services', label: 'Services' },
-  { to: '/blog', label: 'Journal' },
-  { to: '/about', label: 'About' },
-  { to: '/contact', label: 'Contact' },
-]
-
-/** Wordmark — Fraunces "Imba" + small mono "PRODUCTION". */
-function Wordmark() {
+/** Wordmark — Fraunces brand name + small mono accent. */
+function Wordmark({ name, accent, homePath }: { name: string; accent?: string; homePath: string }) {
   return (
-    <Link to="/" className="group inline-flex items-baseline gap-2" aria-label="Imba Production — home">
-      <span className="font-serif text-xl leading-none tracking-[-0.02em] text-cine-text">Imba</span>
-      <span className="font-mono text-[0.6rem] tracking-[0.28em] uppercase text-cine-dim transition-colors group-hover:text-cine-accent">
-        Production
-      </span>
+    <Link to={homePath} className="group inline-flex items-baseline gap-2" aria-label={`${name}${accent ? ` ${accent}` : ''} — home`}>
+      <span className="font-serif text-xl leading-none tracking-[-0.02em] text-cine-text">{name}</span>
+      {accent && (
+        <span className="font-mono text-[0.6rem] tracking-[0.28em] uppercase text-cine-dim transition-colors group-hover:text-cine-accent">
+          {accent}
+        </span>
+      )}
     </Link>
   )
 }
 
+function CtaLink({ cta, className, onClick }: { cta: ThemeAction; className: string; onClick?: () => void }) {
+  if (cta.href && !cta.to) {
+    return (
+      <a href={cta.href} className={className} onClick={onClick}>
+        {cta.label}
+      </a>
+    )
+  }
+  return (
+    <Link to={cta.to ?? '/'} className={className} onClick={onClick}>
+      {cta.label}
+    </Link>
+  )
+}
+
+function linkKey(link: ThemeLink): string {
+  return link.to ?? link.href ?? link.label
+}
+
 export function Nav() {
+  const theme = useThemeConfig()
+  const brandName = theme.brand?.name ?? CINEMA_THEME_DEFAULTS.brand!.name!
+  const brandAccent = theme.brand?.accent
+  const homePath = theme.brand?.homePath ?? '/'
+  const links = theme.navLinks ?? CINEMA_THEME_DEFAULTS.navLinks!
+  const cta = theme.navCta
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -54,22 +76,26 @@ export function Nav() {
         }`}
       >
         <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-6 px-6 lg:h-20 lg:px-10">
-          <Wordmark />
+          <Wordmark name={brandName} accent={brandAccent} homePath={homePath} />
 
           {/* Desktop links */}
           <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary">
-            {LINKS.map(({ to, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) => `cine-link ${isActive ? 'is-active' : ''}`}
-              >
-                {label}
-              </NavLink>
+            {links.map((link) => (
+              link.to ? (
+                <NavLink
+                  key={linkKey(link)}
+                  to={link.to}
+                  className={({ isActive }) => `cine-link ${isActive ? 'is-active' : ''}`}
+                >
+                  {link.label}
+                </NavLink>
+              ) : (
+                <a key={linkKey(link)} href={link.href} className="cine-link">
+                  {link.label}
+                </a>
+              )
             ))}
-            <Link to="/contact" className="cine-btn cine-btn--accent ml-2">
-              Start a project
-            </Link>
+            {cta && <CtaLink cta={cta} className="cine-btn cine-btn--accent ml-2" />}
           </nav>
 
           {/* Mobile burger */}
@@ -110,27 +136,34 @@ export function Nav() {
       >
         <div className="flex h-full flex-col justify-center gap-1 px-8">
           <span className="cine-eyebrow mb-8">Menu</span>
-          {LINKS.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `font-serif text-5xl leading-[1.05] tracking-[-0.02em] transition-colors ${
-                  isActive ? 'text-cine-accent' : 'text-cine-text hover:text-cine-accent'
-                }`
-              }
-            >
-              {label}
-            </NavLink>
+          {links.map((link) => (
+            link.to ? (
+              <NavLink
+                key={linkKey(link)}
+                to={link.to}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  `font-serif text-5xl leading-[1.05] tracking-[-0.02em] transition-colors ${
+                    isActive ? 'text-cine-accent' : 'text-cine-text hover:text-cine-accent'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ) : (
+              <a
+                key={linkKey(link)}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="font-serif text-5xl leading-[1.05] tracking-[-0.02em] text-cine-text transition-colors hover:text-cine-accent"
+              >
+                {link.label}
+              </a>
+            )
           ))}
-          <Link
-            to="/contact"
-            onClick={() => setOpen(false)}
-            className="cine-btn cine-btn--accent mt-10 self-start"
-          >
-            Start a project
-          </Link>
+          {cta && (
+            <CtaLink cta={cta} className="cine-btn cine-btn--accent mt-10 self-start" onClick={() => setOpen(false)} />
+          )}
         </div>
       </div>
     </>

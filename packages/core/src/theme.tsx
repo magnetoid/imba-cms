@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type {
   Component,
@@ -110,23 +110,63 @@ const ThemeContext = createContext<ThemeContextValue>({
   slots: {},
 })
 
+export type ThemeResolver = () => Promise<ThemeConfig | undefined>
+
+/**
+ * Merges theme configuration from four layers, lowest precedence first:
+ * derived from `SiteConfig` → template defaults → code-level `site.theme` →
+ * whatever plugins resolve at runtime (`Plugin.resolveTheme`, e.g. the site
+ * plugin's published settings row).
+ *
+ * The runtime layer wins because it is the one an editor controls from the
+ * admin; code-level values are the fallback for a fresh install. Before this
+ * layer existed the site plugin published settings nobody read.
+ *
+ * Resolvers run once after mount. Until they settle the static merge renders,
+ * so a slow or failing fetch degrades to the code defaults rather than a blank
+ * page; a rejected resolver is ignored (logged) and the others still apply.
+ */
 export function ThemeProvider({
   template,
   site,
+  resolvers,
   children,
 }: {
   template: Template
   site: SiteConfig
+  resolvers?: readonly ThemeResolver[]
   children: ReactNode
 }) {
+  const [resolved, setResolved] = useState<ThemeConfig[]>([])
+
+  useEffect(() => {
+    if (!resolvers || resolvers.length === 0) return
+    let cancelled = false
+    Promise.all(
+      resolvers.map((resolve) =>
+        resolve().catch((error: unknown) => {
+          if (typeof console !== 'undefined') console.warn('ThemeProvider: theme resolver failed', error)
+          return undefined
+        }),
+      ),
+    ).then((configs) => {
+      if (cancelled) return
+      setResolved(configs.filter((c): c is ThemeConfig => Boolean(c)))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [resolvers])
+
   const value = useMemo<ThemeContextValue>(() => ({
     config: mergeThemeConfig(
       deriveThemeConfigFromSite(site),
       template.theme?.defaults,
       site.theme,
+      ...resolved,
     ),
     slots: mergeThemeSlots(template.theme?.slots, site.themeSlots),
-  }), [site, template])
+  }), [site, template, resolved])
 
   return (
     <ThemeContext.Provider value={value}>

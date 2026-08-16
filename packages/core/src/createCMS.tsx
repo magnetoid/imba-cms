@@ -6,7 +6,7 @@ import { assertValidCmsConfig } from './config'
 import { createDb } from './db'
 import { createAuth } from './auth'
 import { AdminShell } from './AdminShell'
-import { ThemeProvider } from './theme'
+import { ThemeProvider, type ThemeResolver } from './theme'
 import { useDocumentSeo } from './seo'
 import { initI18n } from './i18n'
 import { seedPlugins, seedablePlugins, type SeedOptions, type SeedResult } from './seed'
@@ -58,6 +58,7 @@ interface InitializedCmsRuntime {
   db: ReturnType<typeof createDb>
   seed: (opts?: SeedOptions) => Promise<SeedResult[]>
   seedablePlugins: string[]
+  themeResolvers: ThemeResolver[]
 }
 
 function PublicRouteElement({
@@ -124,6 +125,9 @@ function initializeCmsRuntime(config: Omit<CMSConfig, 'template'> & { template?:
     db,
     seed: (opts) => seedPlugins(registry.orderedPlugins, ctx, opts),
     seedablePlugins: seedablePlugins(registry.orderedPlugins),
+    // Bound once here so ThemeProvider receives a stable array and its
+    // resolve-on-mount effect does not re-fire on every render.
+    themeResolvers: registry.themeResolvers.map(({ resolve }) => () => resolve(ctx)),
   }
 }
 
@@ -148,13 +152,13 @@ export function createAdminApp(config: Omit<CMSConfig, 'template'>) {
 }
 
 export function createPublicApp(config: CMSConfig) {
-  const { registry, seed, seedablePlugins } = initializeCmsRuntime(config)
+  const { registry, seed, seedablePlugins, themeResolvers } = initializeCmsRuntime(config)
 
   const Public = config.template.layouts.Public
 
   function Router() {
     return (
-      <ThemeProvider template={config.template} site={config.site}>
+      <ThemeProvider template={config.template} site={config.site} resolvers={themeResolvers}>
         <Routes>
           {registry.routes.map((r) => (
             <Route
@@ -172,7 +176,7 @@ export function createPublicApp(config: CMSConfig) {
 }
 
 export function createCMS(config: CMSConfig): CMSInstance {
-  const { registry, auth, db, seed, seedablePlugins } = initializeCmsRuntime(config)
+  const { registry, auth, db, seed, seedablePlugins, themeResolvers } = initializeCmsRuntime(config)
   const Public = config.template.layouts.Public
 
   function AdminRouter() {
@@ -191,7 +195,7 @@ export function createCMS(config: CMSConfig): CMSInstance {
 
   function PublicRouter() {
     return (
-      <ThemeProvider template={config.template} site={config.site}>
+      <ThemeProvider template={config.template} site={config.site} resolvers={themeResolvers}>
         <Routes>
           {registry.routes.map((r) => (
             <Route
@@ -207,7 +211,7 @@ export function createCMS(config: CMSConfig): CMSInstance {
 
   function Router() {
     return (
-      <ThemeProvider template={config.template} site={config.site}>
+      <ThemeProvider template={config.template} site={config.site} resolvers={themeResolvers}>
         <Routes>
           <Route path="/admin/*" element={<AdminRouter />} />
           {registry.routes.map((r) => (

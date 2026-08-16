@@ -198,6 +198,13 @@ export interface Plugin {
   dashboard?: WidgetDef[]
   seed?: (ctx: PluginContext) => Promise<void>
   register?: (ctx: PluginContext) => void
+  /**
+   * Contribute CMS-managed theme configuration at runtime (e.g. from a table
+   * an editor maintains). Resolved by `ThemeProvider` after mount and merged
+   * over the template defaults and the code-level `site.theme`, in plugin
+   * dependency order. Return `undefined` to contribute nothing.
+   */
+  resolveTheme?: (ctx: PluginContext) => Promise<ThemeConfig | undefined>
 }
 
 export interface Template {

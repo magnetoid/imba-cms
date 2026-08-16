@@ -61,3 +61,17 @@ describe('buildRegistry i18n', () => {
     expect(buildRegistry([blog]).i18n).toEqual({})
   })
 })
+
+describe('buildRegistry theme resolvers', () => {
+  it('collects plugin resolveTheme hooks in dependency order', () => {
+    const resolveA = async () => ({ brand: { name: 'a' } })
+    const resolveB = async () => ({ brand: { name: 'b' } })
+    const reg = buildRegistry([
+      { name: 'b', version: '1', dependsOn: ['a'], resolveTheme: resolveB },
+      { name: 'a', version: '1', resolveTheme: resolveA },
+      { name: 'c', version: '1' },
+    ])
+    expect(reg.themeResolvers.map((r) => r.plugin)).toEqual(['a', 'b'])
+    expect(reg.themeResolvers.map((r) => r.resolve)).toEqual([resolveA, resolveB])
+  })
+})

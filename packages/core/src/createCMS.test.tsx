@@ -153,3 +153,33 @@ describe('createCMS seeds', () => {
     expect(results).toEqual([{ plugin: 'seeded', status: 'seeded' }])
   })
 })
+
+describe('createCMS runtime theme', () => {
+  it('feeds plugin-resolved theme config to the public router', async () => {
+    const { useThemeConfig } = await import('./theme')
+    const { waitFor } = await import('@testing-library/react')
+    function BrandPage() {
+      return <div data-testid="brand-page">{useThemeConfig().brand?.name}</div>
+    }
+    const cms = createCMS({
+      template: defineTemplate({
+        name: 'brandy',
+        layouts: { Public: ({ children }: { children?: React.ReactNode }) => <>{children}</> },
+        pages: [{ path: '/', element: BrandPage }],
+      }),
+      plugins: [definePlugin({
+        name: 'site-like',
+        version: '1.0.0',
+        resolveTheme: async (ctx) => ({ brand: { name: `Managed ${ctx.config.name}` } }),
+      })],
+      site,
+      supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
+    })
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <cms.PublicRouter />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(screen.getByTestId('brand-page').textContent).toBe('Managed Test'))
+  })
+})

@@ -1,4 +1,4 @@
-import type { Locale, MigrationDef, NavItem, Plugin, RouteDef, Template, WidgetDef } from './types'
+import type { Locale, MigrationDef, NavItem, Plugin, PluginContext, RouteDef, Template, ThemeConfig, WidgetDef } from './types'
 import { validatePlugins } from './validate'
 import { orderMigrations, orderPlugins } from './migrations'
 
@@ -15,6 +15,13 @@ export interface CMSRegistry {
    * clobbering each other. Fed to `initI18n` by the boot path.
    */
   i18n: I18nResources
+  /** Every plugin `resolveTheme` hook, in dependency order. */
+  themeResolvers: ThemeResolverEntry[]
+}
+
+export interface ThemeResolverEntry {
+  plugin: string
+  resolve: (ctx: PluginContext) => Promise<ThemeConfig | undefined>
 }
 
 export type I18nResources = Record<Locale, Record<string, Record<string, string>>>
@@ -58,6 +65,9 @@ export function buildRegistry(plugins: Plugin[], template?: Template): CMSRegist
   const dashboard: WidgetDef[] = plugins.flatMap((p) => p.dashboard ?? [])
   const migrations = orderMigrations(orderedPlugins)
   const i18n = collectI18nResources(orderedPlugins)
+  const themeResolvers: ThemeResolverEntry[] = orderedPlugins
+    .filter((p) => typeof p.resolveTheme === 'function')
+    .map((p) => ({ plugin: p.name, resolve: p.resolveTheme! }))
 
-  return { routes, adminNav, adminPages, migrations, dashboard, orderedPlugins, i18n }
+  return { routes, adminNav, adminPages, migrations, dashboard, orderedPlugins, i18n, themeResolvers }
 }
