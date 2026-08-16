@@ -56,6 +56,29 @@ function mapSiteSettingsRow(row: SiteSettingsRow): SiteSettingsRecord {
   }
 }
 
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) throw new Error(`site delivery request failed with status ${response.status}`)
+  return response.json() as Promise<T>
+}
+
+/**
+ * Reads the published site settings from `@imba/settings-server`'s delivery
+ * API (`/api/content/site`). Selected by `register` when
+ * `IMBA_CONTENT_API_URL` is set.
+ */
+export function createHttpSitePublicClient(config: { baseUrl: string; fetchImpl?: typeof fetch }): SitePublicClient {
+  const fetchImpl = config.fetchImpl ?? fetch
+  const base = config.baseUrl.replace(/\/$/, '')
+  return {
+    async getPublishedSiteSettings(): Promise<SiteSettingsRecord | null> {
+      const response = await fetchImpl(`${base}/api/content/site`)
+      if (response.status === 404) return null
+      const payload = await readJson<{ item: SiteSettingsRow | null }>(response)
+      return payload.item ? mapSiteSettingsRow(payload.item) : null
+    },
+  }
+}
+
 export function createSupabaseSitePublicClient(db: SupabaseClient): SitePublicClient {
   return {
     async getPublishedSiteSettings(): Promise<SiteSettingsRecord | null> {

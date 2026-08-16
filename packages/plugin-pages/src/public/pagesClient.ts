@@ -61,6 +61,42 @@ function mapPageRow<TSlug extends CmsPageSlug>(row: PageRow, slug: TSlug): CmsPa
   }
 }
 
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) throw new Error(`pages delivery request failed with status ${response.status}`)
+  return response.json() as Promise<T>
+}
+
+/**
+ * Reads pages from `@imba/settings-server`'s delivery API
+ * (`/api/content/pages`) instead of Supabase directly. Selected by `register`
+ * when `IMBA_CONTENT_API_URL` is set. Published entries only — the API never
+ * serves drafts.
+ */
+export function createHttpPagesPublicClient(config: { baseUrl: string; fetchImpl?: typeof fetch }): PagesPublicClient {
+  const fetchImpl = config.fetchImpl ?? fetch
+  const base = config.baseUrl.replace(/\/$/, '')
+  return {
+    async getPage<TSlug extends CmsPageSlug>(slug: TSlug): Promise<CmsPageRecord<TSlug> | null> {
+      const response = await fetchImpl(`${base}/api/content/pages/${encodeURIComponent(slug)}`)
+      if (response.status === 404) return null
+      const payload = await readJson<{ item: PageRow | null }>(response)
+      if (!payload.item || !isCmsPageSlug(payload.item.slug)) return null
+      return mapPageRow(payload.item, payload.item.slug as TSlug)
+    },
+    async listPages(): Promise<CmsPageSummary[]> {
+      const payload = await readJson<{ items: PageRow[] }>(await fetchImpl(`${base}/api/content/pages`))
+      return payload.items
+        .filter((row) => isCmsPageSlug(row.slug))
+        .map((row) => ({
+          slug: row.slug as CmsPageSlug,
+          title: row.title,
+          status: (row.status === 'published' ? 'published' : 'draft') as CmsPageStatus,
+          updatedAt: row.updated_at,
+        }))
+    },
+  }
+}
+
 export function createSupabasePagesPublicClient(db: SupabaseClient): PagesPublicClient {
   return {
     async getPage<TSlug extends CmsPageSlug>(slug: TSlug): Promise<CmsPageRecord<TSlug> | null> {

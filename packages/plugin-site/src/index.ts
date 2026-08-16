@@ -1,10 +1,10 @@
 import { lazy } from 'react'
-import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
+import { CMS_CAPABILITIES, definePlugin, readBrowserRuntimeOptionalValue } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import { buildDefaultSiteSettingsRecord, buildSiteThemeConfig } from './defaults'
 import V001_site from './migrations/V001_site.sql?raw'
 import V002_site from './migrations/V002_site_rbac.sql?raw'
-import { createSupabaseSitePublicClient, setSiteDb, setSitePublicClient, sitePublicClient } from './public/siteClient'
+import { createHttpSitePublicClient, createSupabaseSitePublicClient, setSiteDb, setSitePublicClient, sitePublicClient } from './public/siteClient'
 import { PRIMARY_SITE_SETTINGS_SLUG } from './types'
 
 const SiteAdmin = lazy(async () => import('./admin/SiteAdmin'))
@@ -53,7 +53,12 @@ export default definePlugin({
   seed: seedDefaultSiteSettings,
   register(ctx) {
     setSiteDb(ctx.db)
-    setSitePublicClient(createSupabaseSitePublicClient(ctx.db))
+    const contentApiUrl = readBrowserRuntimeOptionalValue('IMBA_CONTENT_API_URL')
+    setSitePublicClient(
+      contentApiUrl
+        ? createHttpSitePublicClient({ baseUrl: contentApiUrl })
+        : createSupabaseSitePublicClient(ctx.db),
+    )
   },
   /**
    * The published settings row is the editor-controlled source for brand, nav
@@ -74,6 +79,7 @@ export {
   DEFAULT_SITE_SETTINGS_RECORD,
 } from './defaults'
 export {
+  createHttpSitePublicClient,
   createSupabaseSitePublicClient,
   getSiteSettingsOrDefault,
   setSitePublicClient,

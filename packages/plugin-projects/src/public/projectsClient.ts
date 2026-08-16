@@ -79,6 +79,34 @@ function mapProjectRow(row: ProjectRow): ProjectRecord {
   }
 }
 
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) throw new Error(`projects delivery request failed with status ${response.status}`)
+  return response.json() as Promise<T>
+}
+
+/**
+ * Reads projects from `@imba/settings-server`'s delivery API
+ * (`/api/content/projects`) instead of Supabase directly. Selected by
+ * `register` when `IMBA_CONTENT_API_URL` is set, mirroring the blog plugin.
+ * The API returns the same row shape as the table, so the mapper is shared.
+ */
+export function createHttpProjectsPublicClient(config: { baseUrl: string; fetchImpl?: typeof fetch }): ProjectsPublicClient {
+  const fetchImpl = config.fetchImpl ?? fetch
+  const base = config.baseUrl.replace(/\/$/, '')
+  return {
+    async listPublishedProjects() {
+      const payload = await readJson<{ items: ProjectRow[] }>(await fetchImpl(`${base}/api/content/projects`))
+      return payload.items.map(mapProjectRow)
+    },
+    async getPublishedProjectBySlug(slug: string) {
+      const response = await fetchImpl(`${base}/api/content/projects/${encodeURIComponent(slug)}`)
+      if (response.status === 404) return null
+      const payload = await readJson<{ item: ProjectRow | null }>(response)
+      return payload.item ? mapProjectRow(payload.item) : null
+    },
+  }
+}
+
 export function createSupabaseProjectsPublicClient(db: SupabaseClient): ProjectsPublicClient {
   return {
     async listPublishedProjects(): Promise<ProjectRecord[]> {

@@ -1,10 +1,10 @@
 import { lazy } from 'react'
-import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
+import { CMS_CAPABILITIES, definePlugin, readBrowserRuntimeOptionalValue } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import V001_projects from './migrations/V001_projects.sql?raw'
 import V002_projects from './migrations/V002_projects_rbac.sql?raw'
 import { DEFAULT_PROJECT_RECORDS } from './defaults'
-import { createSupabaseProjectsPublicClient, projectsPublicClient, setProjectsDb, setProjectsPublicClient } from './public/projectsClient'
+import { createHttpProjectsPublicClient, createSupabaseProjectsPublicClient, projectsPublicClient, setProjectsDb, setProjectsPublicClient } from './public/projectsClient'
 
 const ProjectEditor = lazy(async () => import('./admin/ProjectEditor'))
 const ProjectsAdmin = lazy(async () => import('./admin/ProjectsAdmin'))
@@ -67,7 +67,12 @@ export default definePlugin({
   seed: seedDefaultProjects,
   register(ctx) {
     setProjectsDb(ctx.db)
-    setProjectsPublicClient(createSupabaseProjectsPublicClient(ctx.db))
+    const contentApiUrl = readBrowserRuntimeOptionalValue('IMBA_CONTENT_API_URL')
+    setProjectsPublicClient(
+      contentApiUrl
+        ? createHttpProjectsPublicClient({ baseUrl: contentApiUrl })
+        : createSupabaseProjectsPublicClient(ctx.db),
+    )
   },
   /**
    * Published projects become the home page's "selected work" grid — the
@@ -98,6 +103,7 @@ export default definePlugin({
 export { DEFAULT_PROJECT_RECORDS, buildDefaultProjectRecord, buildEmptyProjectRecord } from './defaults'
 export { DEFAULT_PROJECTS_DATA } from './projectsData'
 export {
+  createHttpProjectsPublicClient,
   createSupabaseProjectsPublicClient,
   getProjectOrDefault,
   listProjectsOrDefault,

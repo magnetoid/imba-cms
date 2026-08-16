@@ -1,10 +1,10 @@
 import { lazy } from 'react'
-import { CMS_CAPABILITIES, definePlugin } from '@imba/core'
+import { CMS_CAPABILITIES, definePlugin, readBrowserRuntimeOptionalValue } from '@imba/core'
 import type { PluginContext } from '@imba/core'
 import V001_pages from './migrations/V001_pages.sql?raw'
 import V002_pages from './migrations/V002_pages_rbac.sql?raw'
 import { buildDefaultPageRecord } from './defaults'
-import { setPagesDb, setPagesPublicClient, createSupabasePagesPublicClient, pagesPublicClient } from './public/pagesClient'
+import { setPagesDb, setPagesPublicClient, createHttpPagesPublicClient, createSupabasePagesPublicClient, pagesPublicClient } from './public/pagesClient'
 import { CMS_PAGE_SLUGS } from './types'
 
 const PagesAdmin = lazy(async () => import('./admin/PagesAdmin'))
@@ -62,7 +62,12 @@ export default definePlugin({
   seed: seedDefaultPages,
   register(ctx) {
     setPagesDb(ctx.db)
-    setPagesPublicClient(createSupabasePagesPublicClient(ctx.db))
+    const contentApiUrl = readBrowserRuntimeOptionalValue('IMBA_CONTENT_API_URL')
+    setPagesPublicClient(
+      contentApiUrl
+        ? createHttpPagesPublicClient({ baseUrl: contentApiUrl })
+        : createSupabasePagesPublicClient(ctx.db),
+    )
   },
   /**
    * The published `home` page drives the theme hero, so an editor can change
@@ -84,6 +89,7 @@ export {
   buildDefaultPageRecord,
 } from './defaults'
 export {
+  createHttpPagesPublicClient,
   createSupabasePagesPublicClient,
   getCmsPageOrDefault,
   pagesPublicClient,
