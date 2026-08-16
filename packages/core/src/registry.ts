@@ -1,4 +1,4 @@
-import type { MigrationDef, NavItem, Plugin, RouteDef, Template, WidgetDef } from './types'
+import type { Locale, MigrationDef, NavItem, Plugin, RouteDef, Template, WidgetDef } from './types'
 import { validatePlugins } from './validate'
 import { orderMigrations, orderPlugins } from './migrations'
 
@@ -9,6 +9,25 @@ export interface CMSRegistry {
   migrations: MigrationDef[]
   dashboard: WidgetDef[]
   orderedPlugins: Plugin[]
+  /**
+   * `{ [locale]: { [pluginName]: strings } }` — every plugin's `i18n` block,
+   * namespaced by plugin name so two plugins can both define `title` without
+   * clobbering each other. Fed to `initI18n` by the boot path.
+   */
+  i18n: I18nResources
+}
+
+export type I18nResources = Record<Locale, Record<string, Record<string, string>>>
+
+export function collectI18nResources(plugins: Plugin[]): I18nResources {
+  const resources: I18nResources = {}
+  for (const plugin of plugins) {
+    for (const [locale, strings] of Object.entries(plugin.i18n ?? {})) {
+      resources[locale] ??= {}
+      resources[locale][plugin.name] = strings
+    }
+  }
+  return resources
 }
 
 export function buildRegistry(plugins: Plugin[], template?: Template): CMSRegistry {
@@ -38,6 +57,7 @@ export function buildRegistry(plugins: Plugin[], template?: Template): CMSRegist
   const adminPages: RouteDef[] = plugins.flatMap((p) => p.admin?.pages ?? [])
   const dashboard: WidgetDef[] = plugins.flatMap((p) => p.dashboard ?? [])
   const migrations = orderMigrations(orderedPlugins)
+  const i18n = collectI18nResources(orderedPlugins)
 
-  return { routes, adminNav, adminPages, migrations, dashboard, orderedPlugins }
+  return { routes, adminNav, adminPages, migrations, dashboard, orderedPlugins, i18n }
 }

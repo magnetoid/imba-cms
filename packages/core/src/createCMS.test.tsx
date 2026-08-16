@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { createAdminApp, createCMS, createPublicApp } from './createCMS'
 import { definePlugin, defineTemplate } from './define'
-import type { SiteConfig } from './types'
+import type { PluginContext, SiteConfig } from './types'
 
 const site: SiteConfig = { name: 'Test', domain: 't.com', defaultLocale: 'en', locales: ['en'] }
 
@@ -119,5 +119,37 @@ describe('createCMS', () => {
     expect(() =>
       createPublicApp({ template: expectedTemplate, plugins: [], site, supabase: { url: 'https://test.supabase.co', anonKey: 'k' } }),
     ).toThrow(/expects plugin "blog"/i)
+  })
+})
+
+describe('createCMS i18n', () => {
+  it('loads every plugin\'s i18n strings so react-i18next can resolve them by plugin namespace', async () => {
+    const i18next = (await import('i18next')).default
+    createCMS({
+      template,
+      plugins: [definePlugin({ name: 'i18n-plugin', version: '1.0.0', i18n: { en: { greeting: 'Hello from plugin' } } })],
+      site,
+      supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
+    })
+    expect(i18next.t('greeting', { ns: 'i18n-plugin' })).toBe('Hello from plugin')
+  })
+})
+
+describe('createCMS seeds', () => {
+  it('exposes the plugin seed hooks through the instance instead of leaving them uncalled', async () => {
+    // `Plugin.seed` existed on the contract and four plugins implemented it, but
+    // nothing in core ever invoked one. The instance now owns the runner.
+    const seed = vi.fn(async (_ctx: PluginContext) => {})
+    const cms = createCMS({
+      template,
+      plugins: [definePlugin({ name: 'seeded', version: '1.0.0', seed }), blog],
+      site,
+      supabase: { url: 'https://test.supabase.co', anonKey: 'k' },
+    })
+    expect(cms.seedablePlugins).toEqual(['seeded'])
+    const results = await cms.seed()
+    expect(seed).toHaveBeenCalledOnce()
+    expect(seed.mock.calls[0]![0]).toMatchObject({ config: site })
+    expect(results).toEqual([{ plugin: 'seeded', status: 'seeded' }])
   })
 })

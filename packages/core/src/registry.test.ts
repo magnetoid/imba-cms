@@ -44,3 +44,20 @@ describe('buildRegistry', () => {
     expect(() => buildRegistry([blog], clash)).toThrow(/route path collides with template: \/blog/i)
   })
 })
+
+describe('buildRegistry i18n', () => {
+  it('collects each plugin\'s strings into a per-locale, per-plugin-namespace bundle', () => {
+    const reg = buildRegistry([
+      { ...blog, i18n: { en: { title: 'Blog' }, sr: { title: 'Blog (sr)' } } },
+      { name: 'pages', version: '1.0.0', i18n: { en: { title: 'Pages' } } },
+    ])
+    expect(reg.i18n).toEqual({
+      en: { blog: { title: 'Blog' }, pages: { title: 'Pages' } },
+      sr: { blog: { title: 'Blog (sr)' } },
+    })
+  })
+
+  it('yields an empty bundle when no plugin declares strings', () => {
+    expect(buildRegistry([blog]).i18n).toEqual({})
+  })
+})

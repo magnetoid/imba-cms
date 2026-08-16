@@ -181,3 +181,60 @@ describe('AdminShell', () => {
     expect(within(screen.getByTestId('admin-dashboard')).getByText('Settings')).toBeDefined()
   })
 })
+
+describe('AdminShell setup panel', () => {
+  const superAdmin = makeAuth({ user: { id: 'u1', email: 'root@example.com' }, cms_role: 'super_admin' })
+
+  it('lets a settings.manage holder run the plugin seeds from the dashboard', async () => {
+    const seed = vi.fn().mockResolvedValue([
+      { plugin: 'pages', status: 'seeded' },
+      { plugin: 'blog', status: 'failed', error: 'permission denied for table blog_posts' },
+    ])
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route path="/admin/*" element={
+            <AdminShell auth={superAdmin} db={mockDb} nav={[]} pages={[]} widgets={[]} seed={seed} seedablePlugins={['pages', 'blog']} />
+          } />
+        </Routes>
+      </MemoryRouter>,
+    )
+    const panel = await screen.findByTestId('admin-setup-panel')
+    expect(within(panel).getByText('pages')).toBeDefined()
+    expect(within(panel).getByText('blog')).toBeDefined()
+
+    fireEvent.click(within(panel).getByRole('button', { name: /seed default content/i }))
+    expect(await within(panel).findByText(/permission denied for table blog_posts/)).toBeDefined()
+    expect(within(panel).getByText(/seeded/i)).toBeDefined()
+    expect(seed).toHaveBeenCalledOnce()
+  })
+
+  it('hides the setup panel from sessions without settings.manage', async () => {
+    const editor = makeAuth({ user: { id: 'u2', email: 'editor@example.com' }, cms_role: 'editor' })
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route path="/admin/*" element={
+            <AdminShell auth={editor} db={mockDb} nav={[]} pages={[]} widgets={[]} seed={vi.fn()} seedablePlugins={['pages']} />
+          } />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('admin-dashboard')).toBeDefined()
+    expect(screen.queryByTestId('admin-setup-panel')).toBeNull()
+  })
+
+  it('omits the panel entirely when no plugin can be seeded', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route path="/admin/*" element={
+            <AdminShell auth={superAdmin} db={mockDb} nav={[]} pages={[]} widgets={[]} seed={vi.fn()} seedablePlugins={[]} />
+          } />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('admin-dashboard')).toBeDefined()
+    expect(screen.queryByTestId('admin-setup-panel')).toBeNull()
+  })
+})

@@ -8,6 +8,8 @@ import { createAuth } from './auth'
 import { AdminShell } from './AdminShell'
 import { ThemeProvider } from './theme'
 import { useDocumentSeo } from './seo'
+import { initI18n } from './i18n'
+import { seedPlugins, seedablePlugins, type SeedOptions, type SeedResult } from './seed'
 import coreV001 from './migrations/V001_core.sql?raw'
 import coreV002 from './migrations/V002_core.sql?raw'
 import coreV003 from './migrations/V003_rbac.sql?raw'
@@ -37,6 +39,10 @@ export interface CMSInstance {
   AdminRouter: () => ReactElement
   PublicRouter: () => ReactElement
   migrations: MigrationDef[]
+  /** Runs every plugin's `seed` hook (dependency order) against the live db. */
+  seed: (opts?: SeedOptions) => Promise<SeedResult[]>
+  /** Plugin names that declare a `seed` hook. */
+  seedablePlugins: string[]
 }
 
 interface CMSConfig {
@@ -50,6 +56,8 @@ interface InitializedCmsRuntime {
   registry: ReturnType<typeof buildRegistry>
   auth: ReturnType<typeof createAuth>
   db: ReturnType<typeof createDb>
+  seed: (opts?: SeedOptions) => Promise<SeedResult[]>
+  seedablePlugins: string[]
 }
 
 function PublicRouteElement({
@@ -106,23 +114,41 @@ function initializeCmsRuntime(config: Omit<CMSConfig, 'template'> & { template?:
   const auth = createAuth(db)
   const ctx = { db, auth, config: config.site }
 
+  initI18n({ defaultLocale: config.site.defaultLocale, resources: registry.i18n })
+
   for (const plugin of registry.orderedPlugins) plugin.register?.(ctx)
 
-  return { registry, auth, db }
+  return {
+    registry,
+    auth,
+    db,
+    seed: (opts) => seedPlugins(registry.orderedPlugins, ctx, opts),
+    seedablePlugins: seedablePlugins(registry.orderedPlugins),
+  }
 }
 
 export function createAdminApp(config: Omit<CMSConfig, 'template'>) {
-  const { registry, auth, db } = initializeCmsRuntime(config)
+  const { registry, auth, db, seed, seedablePlugins } = initializeCmsRuntime(config)
 
   function Router() {
-    return <AdminShell auth={auth} db={db} nav={registry.adminNav} pages={registry.adminPages} widgets={registry.dashboard} />
+    return (
+      <AdminShell
+        auth={auth}
+        db={db}
+        nav={registry.adminNav}
+        pages={registry.adminPages}
+        widgets={registry.dashboard}
+        seed={seed}
+        seedablePlugins={seedablePlugins}
+      />
+    )
   }
 
-  return { Router, migrations: [...CORE_MIGRATIONS, ...registry.migrations] }
+  return { Router, migrations: [...CORE_MIGRATIONS, ...registry.migrations], seed, seedablePlugins }
 }
 
 export function createPublicApp(config: CMSConfig) {
-  const { registry } = initializeCmsRuntime(config)
+  const { registry, seed, seedablePlugins } = initializeCmsRuntime(config)
 
   const Public = config.template.layouts.Public
 
@@ -142,15 +168,25 @@ export function createPublicApp(config: CMSConfig) {
     )
   }
 
-  return { Router, migrations: [...CORE_MIGRATIONS, ...registry.migrations] }
+  return { Router, migrations: [...CORE_MIGRATIONS, ...registry.migrations], seed, seedablePlugins }
 }
 
 export function createCMS(config: CMSConfig): CMSInstance {
-  const { registry, auth, db } = initializeCmsRuntime(config)
+  const { registry, auth, db, seed, seedablePlugins } = initializeCmsRuntime(config)
   const Public = config.template.layouts.Public
 
   function AdminRouter() {
-    return <AdminShell auth={auth} db={db} nav={registry.adminNav} pages={registry.adminPages} widgets={registry.dashboard} />
+    return (
+      <AdminShell
+        auth={auth}
+        db={db}
+        nav={registry.adminNav}
+        pages={registry.adminPages}
+        widgets={registry.dashboard}
+        seed={seed}
+        seedablePlugins={seedablePlugins}
+      />
+    )
   }
 
   function PublicRouter() {
@@ -186,5 +222,12 @@ export function createCMS(config: CMSConfig): CMSInstance {
     )
   }
 
-  return { Router, AdminRouter, PublicRouter, migrations: [...CORE_MIGRATIONS, ...registry.migrations] }
+  return {
+    Router,
+    AdminRouter,
+    PublicRouter,
+    migrations: [...CORE_MIGRATIONS, ...registry.migrations],
+    seed,
+    seedablePlugins,
+  }
 }
