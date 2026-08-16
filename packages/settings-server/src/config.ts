@@ -12,6 +12,8 @@ export interface SettingsServerConfig {
   port: number
   corsOrigin: CorsOrigins
   previewTokenSecret?: string
+  /** Where GoTrue sends an invited user after they accept (the admin URL). */
+  inviteRedirectTo?: string
 }
 
 function readRequired(env: NodeJS.ProcessEnv, name: string, fallback?: string) {
@@ -68,6 +70,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): SettingsServer
     port: Number(env.IMBA_SETTINGS_PORT ?? '8790'),
     corsOrigin: readCorsOrigins(env),
     previewTokenSecret: env.IMBA_CONTENT_PREVIEW_SECRET,
+    inviteRedirectTo: env.IMBA_INVITE_REDIRECT_URL?.trim() || undefined,
   }
 }
 

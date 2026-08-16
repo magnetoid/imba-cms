@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import { ZodError } from 'zod'
 import { CMS_CAPABILITIES } from '@imba/core/node'
 import {
   graphqlSettingsSchema,
@@ -22,9 +23,18 @@ import {
 import {
   ForbiddenError,
   UnauthorizedError,
+  clearServerSubjectCache,
   requireCapabilityAccess,
   requireSettingsAccess,
 } from './auth.js'
+import {
+  LastSuperAdminError,
+  inviteRequestSchema,
+  inviteUser,
+  listUsers,
+  setRoleRequestSchema,
+  setUserRole,
+} from './users.js'
 
 /** Maps an auth failure to its status code; anything else stays a 400/500. */
 function authStatus(error: unknown): number | null {
@@ -73,7 +83,7 @@ function bearerToken(req: IncomingMessage) {
 
 export function createSettingsHttpHandler(
   db: SettingsDb,
-  config: Pick<SettingsServerConfig, 'corsOrigin' | 'previewTokenSecret'>,
+  config: Pick<SettingsServerConfig, 'corsOrigin' | 'previewTokenSecret' | 'inviteRedirectTo'>,
 ) {
   return async function handler(req: IncomingMessage, res: ServerResponse) {
     // Resolved once per request: an allowlist policy echoes back this request's
@@ -167,6 +177,52 @@ export function createSettingsHttpHandler(
 
     if (!token) {
       sendJson(res, 401, { error: 'Missing bearer token.' }, corsOrigin)
+      return
+    }
+
+    // User management is gated on users.manage (super_admin only), not on
+    // settings.manage, so it is checked before the shared settings gate below.
+    const roleMatch = pathname.match(/^\/api\/users\/([^/]+)\/role$/)
+    if (pathname === '/api/users' || pathname === '/api/users/invite' || roleMatch) {
+      try {
+        await requireCapabilityAccess(db, token, CMS_CAPABILITIES.usersManage)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unauthorized'
+        sendJson(res, authStatus(error) ?? 500, { error: message }, corsOrigin)
+        return
+      }
+
+      try {
+        if (pathname === '/api/users' && req.method === 'GET') {
+          sendJson(res, 200, { items: await listUsers(db) }, corsOrigin)
+          return
+        }
+        if (pathname === '/api/users/invite' && req.method === 'POST') {
+          const body = inviteRequestSchema.parse(await readJsonBody(req))
+          const item = await inviteUser(db, { email: body.email, role: body.role as never }, { redirectTo: config.inviteRedirectTo })
+          sendJson(res, 201, { item }, corsOrigin)
+          return
+        }
+        if (roleMatch && req.method === 'PUT') {
+          const userId = decodeURIComponent(roleMatch[1] ?? '')
+          const body = setRoleRequestSchema.parse(await readJsonBody(req))
+          await setUserRole(db, userId, body.role as never)
+          // The token → subject cache would otherwise keep the old role live
+          // for up to its TTL; a role change must take effect on the next call.
+          clearServerSubjectCache()
+          sendJson(res, 200, { ok: true }, corsOrigin)
+          return
+        }
+        sendJson(res, 405, { error: 'Method not allowed' }, corsOrigin)
+      } catch (error) {
+        if (error instanceof LastSuperAdminError) {
+          sendJson(res, 409, { error: error.message }, corsOrigin)
+          return
+        }
+        const message = error instanceof Error ? error.message : 'Internal server error'
+        const status = error instanceof ZodError || /invalid|required|must be/i.test(message) ? 400 : 500
+        sendJson(res, status, { error: message }, corsOrigin)
+      }
       return
     }
 

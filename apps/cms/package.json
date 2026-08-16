@@ -14,8 +14,9 @@
     "@imba/plugin-media": "workspace:*",
     "@imba/plugin-pages": "workspace:*",
     "@imba/plugin-projects": "workspace:*",
-    "@imba/plugin-site": "workspace:*",
     "@imba/plugin-settings": "workspace:*",
+    "@imba/plugin-site": "workspace:*",
+    "@imba/plugin-users": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.0"
