@@ -45,8 +45,9 @@ export const updatePageSchema = z.object({
   slug,
   patch: z.object({
     title: z.string().min(1).optional(),
-    seo_title: z.string().nullable().optional(),
-    seo_description: z.string().nullable().optional(),
+    // NOT NULL DEFAULT '' in pages V001 — send '' to clear, never null.
+    seo_title: z.string().optional(),
+    seo_description: z.string().optional(),
     content: jsonObject.optional(),
   }).strict(),
 })
@@ -98,8 +99,9 @@ const projectFields = {
   featured: z.boolean().optional(),
   sort_order: z.number().int().optional(),
   status: contentStatusSchema.optional(),
-  seo_title: z.string().nullable().optional(),
-  seo_description: z.string().nullable().optional(),
+  // NOT NULL DEFAULT '' in projects V001 — send '' to clear, never null.
+  seo_title: z.string().optional(),
+  seo_description: z.string().optional(),
   content: jsonObject.optional(),
 }
 

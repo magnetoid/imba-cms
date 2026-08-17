@@ -59,6 +59,8 @@ describe('pages', () => {
     await updatePage(db, { slug: 'about', patch: { title: 'New', content: { eyebrow: 'x' } } })
     expect(last().payload).toMatchObject({ title: 'New', content: { eyebrow: 'x' } })
     await expect(updatePage(db, { slug: 'about', patch: { status: 'published' } as never })).rejects.toThrow()
+    // seo_* are NOT NULL in the table; null must be rejected before it hits Postgres.
+    await expect(updatePage(db, { slug: 'about', patch: { seo_title: null } as never })).rejects.toThrow()
   })
 
   it('publishing stamps published_at; drafting clears it', async () => {

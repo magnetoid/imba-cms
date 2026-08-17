@@ -58,6 +58,16 @@ function makeDb(seed: { users: Array<{ id: string; email: string }>; roles: Role
   return { db, roles, users }
 }
 
+describe('role request schemas', () => {
+  it('normalise the role to its canonical lowercase form', async () => {
+    const { setRoleRequestSchema, inviteRequestSchema } = await import('./users.js')
+    expect(setRoleRequestSchema.parse({ role: ' Editor ' })).toEqual({ role: 'editor' })
+    expect(setRoleRequestSchema.parse({ role: null })).toEqual({ role: null })
+    expect(inviteRequestSchema.parse({ email: 'a@x.io', role: 'SUPER_ADMIN' }).role).toBe('super_admin')
+    expect(() => setRoleRequestSchema.parse({ role: 'overlord' })).toThrow()
+  })
+})
+
 describe('users service', () => {
   it('lists every auth user with their CMS role (or none)', async () => {
     const { db } = makeDb({

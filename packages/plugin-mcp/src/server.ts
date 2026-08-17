@@ -336,8 +336,8 @@ export function buildMcpServer(
           slug: z.string().min(1),
           patch: z.object({
             title: z.string().min(1).optional(),
-            seo_title: z.string().nullable().optional(),
-            seo_description: z.string().nullable().optional(),
+            seo_title: z.string().optional().describe('Empty string clears it'),
+            seo_description: z.string().optional().describe('Empty string clears it'),
             content: jsonContent.optional(),
           }).describe('Fields to change'),
         },
@@ -371,8 +371,8 @@ export function buildMcpServer(
     featured: z.boolean().optional(),
     sort_order: z.number().int().optional(),
     status: contentStatusSchema.optional(),
-    seo_title: z.string().nullable().optional(),
-    seo_description: z.string().nullable().optional(),
+    seo_title: z.string().optional().describe('Empty string clears it'),
+    seo_description: z.string().optional().describe('Empty string clears it'),
     content: z.record(z.unknown()).optional().describe('Case-study body; must match @imba/plugin-projects projectContentSchema'),
   }
 

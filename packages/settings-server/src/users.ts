@@ -25,9 +25,17 @@ export interface ManagedUser {
 }
 
 const ROLE_TABLE = 'cms_user_roles'
-const roleSchema = z.string().refine((value) => parseCmsRole(value) !== undefined, {
-  message: `role must be one of: ${CMS_ROLES.join(', ')}`,
-})
+/**
+ * Accepts the role case/whitespace-insensitively (like the DB-side
+ * `parseCmsRole`) but always yields the canonical lowercase value — the
+ * `cms_user_roles.role` check constraint only admits those.
+ */
+const roleSchema = z
+  .string()
+  .refine((value) => parseCmsRole(value) !== undefined, {
+    message: `role must be one of: ${CMS_ROLES.join(', ')}`,
+  })
+  .transform((value) => parseCmsRole(value) as CmsRole)
 
 export const setRoleRequestSchema = z.object({
   /** `null` removes the user's CMS access entirely. */

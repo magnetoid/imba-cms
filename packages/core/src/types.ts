@@ -112,6 +112,8 @@ export interface ThemeBrandConfig {
 }
 
 export interface ThemeConfig {
+  /** The site's display name (from `SiteConfig.name`); used for document titles. */
+  siteName?: string
   siteUrl?: string
   brand?: ThemeBrandConfig
   navLinks?: ThemeLink[]

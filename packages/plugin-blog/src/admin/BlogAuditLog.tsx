@@ -12,7 +12,8 @@ export interface AuditRow {
   status: string | null
   metadata: Record<string, unknown>
   created_at: string
-  blog_posts?: { title: string; slug: string } | null
+  /** Resolved client-side; absent when the post no longer exists. */
+  post?: { title: string; slug: string } | null
 }
 
 const PAGE_SIZE = 50
@@ -42,23 +43,41 @@ export default function BlogAuditLog() {
   useEffect(() => {
     let cancelled = false
     setRows(null)
-    blogDb()
-      .from('blog_post_audit_log')
-      .select('id, post_id, event_type, actor_email, status, metadata, created_at, blog_posts(title, slug)')
-      .order('created_at', { ascending: false })
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
-      .then(({ data, error: queryError }) => {
+
+    async function load() {
+      const { data, error: queryError } = await blogDb()
+        .from('blog_post_audit_log')
+        .select('id, post_id, event_type, actor_email, status, metadata, created_at')
+        .order('created_at', { ascending: false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+      if (cancelled) return
+      if (queryError) {
+        setError(queryError.message)
+        setRows([])
+        return
+      }
+      const list = (data ?? []) as unknown as AuditRow[]
+
+      // `post_id` deliberately has no foreign key (audit rows outlive their
+      // post), so PostgREST cannot embed blog_posts here. Resolve titles in a
+      // second query and join client-side; a missing row means the post was
+      // deleted, which the table shows as such.
+      const ids = [...new Set(list.map((row) => row.post_id).filter((id): id is string => Boolean(id)))]
+      const titles = new Map<string, { title: string; slug: string }>()
+      if (ids.length > 0) {
+        const { data: posts } = await blogDb().from('blog_posts').select('id, title, slug').in('id', ids)
         if (cancelled) return
-        if (queryError) {
-          setError(queryError.message)
-          setRows([])
-          return
+        for (const post of (posts ?? []) as Array<{ id: string; title: string; slug: string }>) {
+          titles.set(post.id, { title: post.title, slug: post.slug })
         }
-        const list = (data ?? []) as unknown as AuditRow[]
-        setHasMore(list.length > PAGE_SIZE)
-        setRows(list.slice(0, PAGE_SIZE))
-        setError(null)
-      })
+      }
+
+      setHasMore(list.length > PAGE_SIZE)
+      setRows(list.slice(0, PAGE_SIZE).map((row) => ({ ...row, post: row.post_id ? titles.get(row.post_id) ?? null : null })))
+      setError(null)
+    }
+
+    void load()
     return () => { cancelled = true }
   }, [page])
 
@@ -97,10 +116,10 @@ export default function BlogAuditLog() {
                 <TableRow key={row.id} data-testid={`audit-row-${row.id}`}>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{new Date(row.created_at).toLocaleString()}</TableCell>
                   <TableCell>
-                    {row.post_id && row.blog_posts ? (
-                      <Link to={`/admin/blog/edit/${row.post_id}`} className="hover:underline">{row.blog_posts.title}</Link>
+                    {row.post_id && row.post ? (
+                      <Link to={`/admin/blog/edit/${row.post_id}`} className="hover:underline">{row.post.title}</Link>
                     ) : (
-                      <span className="text-muted-foreground">{row.blog_posts?.title ?? (row.post_id ? 'Deleted post' : '—')}</span>
+                      <span className="text-muted-foreground">{row.post_id ? 'Deleted post' : '—'}</span>
                     )}
                   </TableCell>
                   <TableCell><Badge variant="secondary" className="text-xs">{row.event_type}</Badge></TableCell>

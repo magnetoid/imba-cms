@@ -234,14 +234,14 @@ export function createSettingsHttpHandler(
         }
         if (pathname === '/api/users/invite' && req.method === 'POST') {
           const body = inviteRequestSchema.parse(await readJsonBody(req))
-          const item = await inviteUser(db, { email: body.email, role: body.role as never }, { redirectTo: config.inviteRedirectTo })
+          const item = await inviteUser(db, { email: body.email, role: body.role }, { redirectTo: config.inviteRedirectTo })
           sendJson(res, 201, { item }, corsOrigin)
           return
         }
         if (roleMatch && req.method === 'PUT') {
           const userId = decodeURIComponent(roleMatch[1] ?? '')
           const body = setRoleRequestSchema.parse(await readJsonBody(req))
-          await setUserRole(db, userId, body.role as never)
+          await setUserRole(db, userId, body.role)
           // The token → subject cache would otherwise keep the old role live
           // for up to its TTL; a role change must take effect on the next call.
           clearServerSubjectCache()

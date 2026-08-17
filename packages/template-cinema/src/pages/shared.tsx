@@ -137,7 +137,7 @@ export function usePageSeo(seo: { title?: string; description?: string; type?: '
     title: seo?.title,
     description: seo?.description,
     type: seo?.type,
-    siteName: theme.brand?.name,
+    siteName: theme.siteName ?? theme.brand?.name,
     siteUrl: theme.siteUrl,
   })
 }

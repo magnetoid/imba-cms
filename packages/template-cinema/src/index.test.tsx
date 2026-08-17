@@ -160,3 +160,21 @@ describe('@imba/template-cinema page SEO', () => {
     expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Managed SEO description')
   })
 })
+
+describe('@imba/template-cinema project route aliases', () => {
+  it('redirects /projects and /projects/:slug (plugin-site default nav) to /work', async () => {
+    const { Routes, Route, useLocation } = await import('react-router-dom')
+    const Probe = () => <div data-testid="loc">{useLocation().pathname}</div>
+    const alias = cinema.pages!.find((p) => p.path === '/projects/:slug')!.element
+    const Alias = alias
+    render(
+      <MemoryRouter initialEntries={['/projects/quorum']}>
+        <Routes>
+          <Route path="/projects/:slug" element={<Alias />} />
+          <Route path="/work/:slug" element={<Probe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('loc').textContent).toBe('/work/quorum')
+  })
+})

@@ -15,8 +15,9 @@ For hosted HTTP deployments, the server can now enforce:
 - inbound HTTP auth
 - capability-based tool/resource exposure
 
-**v1 scope:** blog content (`blog_posts`, `blog_categories`). The structure is
-built so more entities can be added later, but only blog ships today.
+**Scope:** blog (`blog_posts`, `blog_categories`), pages (`pages_entries`),
+projects (`projects_entries`) and site settings (`site_entries`). Each family is
+gated on its own capabilities; see the tool table below.
 
 ## Environment variables
 

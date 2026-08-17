@@ -68,7 +68,7 @@ export function parseArgs(argv: string[]): Cli {
   return cli
 }
 
-const USAGE = `${SERVER_NAME} v${SERVER_VERSION} — MCP server for IMBA CMS blog content
+const USAGE = `${SERVER_NAME} v${SERVER_VERSION} — MCP server for IMBA CMS content (blog, pages, projects, site)
 
 Usage:
   imba-mcp                       Start over stdio (default; for local agents)
@@ -87,9 +87,13 @@ Environment (required unless --help):
   IMBA_MCP_ALLOWED_CAPABILITIES   optional comma-separated tool scope override
 
 The service-role key is used server-side only and is never exposed through any
-tool argument or response. Exposed tools:
+tool argument or response. Exposed tools (each gated on its capability):
   blog_list_posts, blog_get_post, blog_search_posts, blog_create_post,
   blog_update_post, blog_delete_post, blog_set_published, blog_list_categories
+  pages_list, pages_get, pages_update, pages_set_status
+  projects_list, projects_get, projects_create, projects_update,
+  projects_delete, projects_set_status
+  site_get_settings, site_update_settings, site_set_status
 Exposed resources:
   imba://blog/posts            (all posts)
   imba://blog/posts/{slug}     (single post by slug)

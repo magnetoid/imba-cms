@@ -82,6 +82,7 @@ function deriveThemeConfigFromSite(site: SiteConfig): ThemeConfig {
     : undefined
 
   return {
+    siteName: site.name,
     siteUrl: normalizeSiteUrl(site.domain),
     brand: {
       name: site.name,

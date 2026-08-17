@@ -86,6 +86,23 @@ describe('ThemeProvider runtime resolvers', () => {
   })
 })
 
+describe('ThemeProvider derived fields', () => {
+  it('exposes the site name separately from the brand wordmark', async () => {
+    function NameProbe() {
+      const theme = useThemeConfig()
+      return <span data-testid="site-name">{theme.siteName}</span>
+    }
+    render(
+      <ThemeProvider template={template} site={site}>
+        <NameProbe />
+      </ThemeProvider>,
+    )
+    // brand.name is 'Template Default' here; siteName stays the SiteConfig name
+    // so document titles match what the route-level SEO uses.
+    expect(screen.getByTestId('site-name').textContent).toBe('Static Name')
+  })
+})
+
 describe('mergeThemeConfig', () => {
   it('deep-merges brand and replaces link arrays', () => {
     const merged = mergeThemeConfig(
