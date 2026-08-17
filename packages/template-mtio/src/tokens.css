@@ -1,0 +1,176 @@
+/* @imba/template-mtio — mtiosavljevic dark-emerald design tokens & utilities.
+   Ink near-black canvas, Inter display, JetBrains Mono micro-labels, a single
+   emerald accent. We REDEFINE the --cine-* variables (which @imba/tailwind-preset
+   maps to `cine.*` Tailwind colors) so blog-plugin pages inherit this palette
+   automatically. Host app ships @tailwind base/components/utilities + the fonts. */
+
+:root {
+  /* ── Surfaces (ink near-black) ── */
+  --cine-bg: #0a0a0b;
+  --cine-surface: #111114;
+  --cine-surface-2: #17171b;
+
+  /* ── Type ── */
+  --cine-text: #e8e8ea;
+  --cine-dim: #9a9aa2;
+  --cine-faint: #67676f;
+
+  /* ── Hairlines ── */
+  --cine-hairline: rgba(255, 255, 255, 0.06);
+  --cine-hairline-strong: rgba(255, 255, 255, 0.12);
+
+  /* ── The single accent: emerald ── */
+  --cine-accent: #10b981;
+  --cine-accent-soft: rgba(16, 185, 129, 0.12);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  background: var(--cine-bg);
+  color: var(--cine-text);
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--cine-accent-soft);
+  color: var(--cine-text);
+}
+
+/* ── Typography primitives — Inter display, mono-forward ── */
+.cine-display {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 300;
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.cine-h2 {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 300;
+  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+.cine-lead {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 300;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  line-height: 1.6;
+  color: var(--cine-dim);
+}
+
+/* ── Eyebrow / mono micro-label ── */
+.cine-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cine-accent);
+}
+.cine-eyebrow::before {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 1px;
+  background: var(--cine-accent);
+  opacity: 0.6;
+}
+.cine-eyebrow--dim { color: var(--cine-dim); }
+.cine-eyebrow--dim::before { background: var(--cine-dim); opacity: 0.5; }
+
+/* ── Nav links — mono uppercase, animated underline ── */
+.cine-link {
+  position: relative;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cine-dim);
+  text-decoration: none;
+  padding: 0.35rem 0;
+  transition: color 0.25s ease;
+}
+.cine-link::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 1px; width: 100%;
+  background: var(--cine-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cine-link:hover, .cine-link:focus-visible, .cine-link.is-active { color: var(--cine-text); }
+.cine-link:hover::after, .cine-link:focus-visible::after, .cine-link.is-active::after { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .cine-link::after { transition: none; } }
+
+/* ── Buttons — rectangular, hairline border (NOT pills) ── */
+.cine-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.5rem;
+  border: 1px solid var(--cine-hairline-strong);
+  background: transparent;
+  color: var(--cine-text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+.cine-btn:hover, .cine-btn:focus-visible { border-color: var(--cine-accent); }
+.cine-btn--accent {
+  border-color: var(--cine-accent);
+  background: var(--cine-accent);
+  color: #07140f;
+}
+.cine-btn--accent:hover, .cine-btn--accent:focus-visible {
+  background: transparent;
+  color: var(--cine-accent);
+}
+
+/* ── Signature faint grid background (mtiosavljevic hero) ── */
+.mt-grid {
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.035) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ── Skip to content (accessibility) ── */
+.skip-to-content {
+  position: absolute;
+  top: -120%;
+  left: 1rem;
+  z-index: 99999;
+  background: var(--cine-accent);
+  color: var(--cine-bg);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.55rem 1rem;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-to-content:focus { top: 1rem; }

@@ -4,6 +4,8 @@ import V001_blog from './migrations/V001_blog.sql?raw'
 import V002_blog from './migrations/V002_blog.sql?raw'
 import V003_blog from './migrations/V003_blog_rbac.sql?raw'
 import { createHttpBlogPublicClient, createSupabaseBlogPublicClient, setBlogDb, setBlogPublicClient } from './public/blogClient'
+export { setBlogContent } from './public/blogContent'
+export type { BlogContent } from './public/blogContent'
 import { seed } from './seed'
 
 const Blog = lazy(async () => import('./public/Blog'))
