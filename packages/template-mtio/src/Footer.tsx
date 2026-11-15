@@ -17,7 +17,9 @@ const COLUMNS: { heading: string; links: FooterLink[] }[] = [
     links: [
       { label: 'Journal', to: '/blog' },
       { label: 'Contact', to: '/contact' },
-      { label: 'Admin', to: '/admin' },
+      // A real page load, not a router link: the server decides which admin
+      // answers /admin, and a client-side navigation would bypass it.
+      { label: 'Admin', href: '/admin' },
     ],
   },
   {
@@ -34,8 +36,9 @@ function ColumnLink({ link }: { link: FooterLink }) {
   const cls =
     'font-mono text-[0.7rem] uppercase tracking-[0.12em] text-cine-dim transition-colors hover:text-cine-text'
   if (link.href) {
+    const external = /^https?:/.test(link.href)
     return (
-      <a href={link.href} target="_blank" rel="noopener noreferrer" className={cls}>
+      <a href={link.href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={cls}>
         {link.label}
       </a>
     )
